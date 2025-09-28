@@ -1,0 +1,37 @@
+{
+  "name": "@gravity-ui/expresskit-api",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gravity-ui/expresskit-api.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/gravity-ui/expresskit-api/issues"
+  },
+  "homepage": "https://github.com/gravity-ui/expresskit-api#readme",
+  "description": "",
+  "devDependencies": {
+    "@commitlint/cli": "^17.7.1",
+    "@commitlint/config-conventional": "^17.7.0",
+    "@gravity-ui/eslint-config": "^3.2.0",
+    "@gravity-ui/nodekit": "^2.4.1",
+    "@gravity-ui/prettier-config": "^1.1.0",
+    "@gravity-ui/tsconfig": "^1.0.0",
+    "@gravity-ui/expresskit": "^2.7.0",
+    "express": "^4.21.2"
+  },
+  "peerDependencies": {
+    "@gravity-ui/expresskit": "^2.7.0",
+    "express": "^4.21.2"
+  },
+  "dependencies": {
+    "@types/swagger-ui-express": "^4.1.8",
+    "swagger-ui-express": "^5.0.1"
+  }
+}
