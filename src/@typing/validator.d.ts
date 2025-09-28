@@ -1,4 +1,4 @@
-declare module '@gravity-ui/expresskit/build/validator/types' {
+declare module '@gravity-ui/expresskit' {
     interface RouteContract {
         name?: string;
         operationId?: string;
