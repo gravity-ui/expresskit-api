@@ -1,6 +1,3 @@
-import {Request as ExpressRequest, Response} from 'express';
-import {z} from 'zod/v4';
-
 // OpenAPI Security Scheme Object types
 export interface SecuritySchemeObject {
     type: 'apiKey' | 'http' | 'oauth2' | 'openIdConnect';
@@ -82,3 +79,5 @@ export interface OpenApiSchemaObject {
     };
     [key: string]: unknown;
 }
+
+export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete' | 'head' | 'options';

@@ -1,10 +1,18 @@
 import type {OpenApiRegistryConfig, OpenApiSchemaObject, SecuritySchemeObject} from './types';
+import * as swaggerUi from 'swagger-ui-express';
 
-import {RouteContract, AppErrorHandler, AppMiddleware, AppRouteHandler} from '@gravity-ui/expresskit';
+import {
+    RouteContract,
+    AppErrorHandler,
+    AppMiddleware,
+    AppRouteDescription,
+    AppRouteHandler,
+    AppRoutes,
+} from '@gravity-ui/expresskit';
 import {z} from 'zod';
 import {getErrorContract, getContract} from '@gravity-ui/expresskit';
 import {getSecurityScheme} from './security-schemas';
-
+import {HttpMethod} from './types';
 /**
  * Creates an OpenAPI registry that manages routes and security schemes
  * for generating OpenAPI documentation.
@@ -107,15 +115,20 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
         const defaultContentType = responseConfig.contentType || 'application/json';
 
         Object.entries(responseConfig.content).forEach(([statusCode, responseDef]) => {
+            const schema = responseDef instanceof z.ZodType ? responseDef : responseDef.schema;
+            const description =
+                (responseDef instanceof z.ZodType ? undefined : responseDef.description) ||
+                getResponseDescription(statusCode);
+
             const responseObject: Record<string, unknown> = {
-                description: responseDef.description || getResponseDescription(statusCode),
+                description,
             };
 
             // Only add content if there is a schema response
-            if (responseDef.schema) {
+            if (schema) {
                 responseObject.content = {
                     [defaultContentType]: {
-                        schema: z.toJSONSchema(responseDef.schema),
+                        schema: z.toJSONSchema(schema),
                     },
                 };
             }
@@ -126,96 +139,103 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
         return responses;
     }
 
+     /**
+     * Returns the OpenAPI schema that has been built incrementally during route registration
+     *
+     * @returns The OpenAPI schema object
+     */
+    function getOpenApiSchema(): OpenApiSchemaObject {
+        return openApiSchema;
+    }
+
+    function registerRoute(
+        method: HttpMethod,
+        routePath: string,
+        routeHandler: AppRouteHandler,
+        authHandler?: AppMiddleware,
+    ): void {
+        const apiConfig = getContract(routeHandler);
+        if (!apiConfig) return;
+
+        const security = [];
+        if (authHandler) {
+            const securityScheme = getSecurityScheme(authHandler);
+            if (securityScheme) {
+                registerSecurityScheme(securityScheme.name, securityScheme.scheme);
+                security.push({
+                    [securityScheme.name]: securityScheme.scopes || [],
+                });
+            }
+        }
+
+        // Convert Express path to OpenAPI path
+        const openApiPath = routePath.replace(/\/:([^/]+)/g, '/{$1}');
+
+        const pathItem = openApiSchema.paths[openApiPath] || {};
+        const operation: Record<string, unknown> = {
+            summary: apiConfig.summary,
+            description: apiConfig.description,
+            tags: apiConfig.tags,
+            parameters: [],
+            responses: {},
+        };
+
+        if (apiConfig.operationId) {
+            operation.operationId = apiConfig.operationId;
+        }
+
+        if (security.length > 0) {
+            operation.security = security;
+        }
+
+        const parameters = [] as Record<string, unknown>[];
+
+        if (apiConfig.request?.query) {
+            parameters.push(...createParameters('query', apiConfig.request.query));
+        }
+
+        if (apiConfig.request?.params) {
+            parameters.push(...createParameters('path', apiConfig.request.params, true));
+        }
+
+        if (apiConfig.request?.headers) {
+            parameters.push(...createParameters('header', apiConfig.request.headers));
+        }
+
+        operation.parameters = parameters;
+
+        if (
+            ['post', 'put', 'patch'].includes(method.toLowerCase()) &&
+            apiConfig.request?.body
+        ) {
+            operation.requestBody = createRequestBody(
+                apiConfig.request.body,
+                apiConfig.request.contentType,
+            );
+        }
+
+        operation.responses = createResponses(apiConfig.response);
+
+        pathItem[method.toLowerCase()] = operation;
+        openApiSchema.paths[openApiPath] = pathItem;
+    }
+
+    function registerSecurityScheme(name: string, scheme: SecuritySchemeObject): void {
+        if (openApiSchema.components) {
+            if (!openApiSchema.components.securitySchemes) {
+                openApiSchema.components.securitySchemes = {};
+            }
+            openApiSchema.components.securitySchemes[name] = scheme;
+        }
+    }
+
     return {
-        registerSecurityScheme(name: string, scheme: SecuritySchemeObject): void {
-            if (openApiSchema.components) {
-                if (!openApiSchema.components.securitySchemes) {
-                    openApiSchema.components.securitySchemes = {};
-                }
-                openApiSchema.components.securitySchemes[name] = scheme;
-            }
-        },
+        registerRoute,
 
-        registerRoute(
-            method: HttpMethod,
-            routePath: string,
-            routeHandler: AppRouteHandler,
-            authHandler?: AppMiddleware,
-        ): void {
-            const apiConfig = getContract(routeHandler);
-            if (!apiConfig) return;
+        registerSecurityScheme,
 
-            const security = [];
-            if (authHandler) {
-                const securityScheme = getSecurityScheme(authHandler);
-                if (securityScheme) {
-                    this.registerSecurityScheme(securityScheme.name, securityScheme.scheme);
-                    security.push({
-                        [securityScheme.name]: securityScheme.scopes || [],
-                    });
-                }
-            }
-
-            // Convert Express path to OpenAPI path
-            const openApiPath = routePath.replace(/\/:([^/]+)/g, '/{$1}');
-
-            const pathItem = openApiSchema.paths[openApiPath] || {};
-            const operation: Record<string, unknown> = {
-                summary: apiConfig.summary,
-                description: apiConfig.description,
-                tags: apiConfig.tags,
-                parameters: [],
-                responses: {},
-            };
-
-            if (apiConfig.operationId) {
-                operation.operationId = apiConfig.operationId;
-            }
-
-            if (security.length > 0) {
-                operation.security = security;
-            }
-
-            const parameters = [] as Record<string, unknown>[];
-
-            if (apiConfig.request?.query) {
-                parameters.push(...createParameters('query', apiConfig.request.query));
-            }
-
-            if (apiConfig.request?.params) {
-                parameters.push(...createParameters('path', apiConfig.request.params, true));
-            }
-
-            if (apiConfig.request?.headers) {
-                parameters.push(...createParameters('header', apiConfig.request.headers));
-            }
-
-            operation.parameters = parameters;
-
-            if (
-                ['post', 'put', 'patch'].includes(method.toLowerCase()) &&
-                apiConfig.request?.body
-            ) {
-                operation.requestBody = createRequestBody(
-                    apiConfig.request.body,
-                    apiConfig.request.contentType,
-                );
-            }
-
-            operation.responses = createResponses(apiConfig.response);
-
-            pathItem[method.toLowerCase()] = operation;
-            openApiSchema.paths[openApiPath] = pathItem;
-        },
-
-        /**
-         * Returns the OpenAPI schema that has been built incrementally during route registration
-         *
-         * @returns The OpenAPI schema object
-         */
-        getOpenApiSchema(): OpenApiSchemaObject {
-            return openApiSchema;
-        },
+        getOpenApiSchema,
+       
 
         reset(): void {
             openApiSchema.paths = {};
@@ -223,6 +243,56 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
                 openApiSchema.components.schemas = {};
                 openApiSchema.components.securitySchemes = {};
             }
+        },
+
+        registerRoutes(routes: AppRoutes): AppRoutes {
+            const recognizedMethods: readonly HttpMethod[] = [
+                'get',
+                'post',
+                'put',
+                'patch',
+                'delete',
+                'head',
+                'options',
+            ];
+
+            const buildOpenApiSchema = () => {
+                Object.entries(routes).forEach(([path, handlerOrDescription]) => {
+                    const [rawMethod, ...rawPathParts] = path.trim().split(/\s+/);
+                    if (!rawMethod || rawPathParts.length === 0) {
+                        return;
+                    }
+
+                    const methodLower = rawMethod.toLowerCase();
+                    if (!recognizedMethods.includes(methodLower as HttpMethod)) {
+                        return;
+                    }
+
+                    const routePath = rawPathParts.join(' ');
+                    const description: AppRouteDescription =
+                        typeof handlerOrDescription === 'function'
+                            ? {handler: handlerOrDescription}
+                            : handlerOrDescription;
+
+                    registerRoute(
+                        methodLower as HttpMethod,
+                        routePath,
+                        description.handler,
+                        description.authHandler,
+                    );
+                });
+            };
+
+            queueMicrotask(buildOpenApiSchema);
+
+            return {
+                ...routes,
+                'MOUNT /api/docs': {
+                    handler: ({router}) => {
+                        router.use('/', swaggerUi.serve, swaggerUi.setup(getOpenApiSchema()));
+                    },
+                },
+            };
         },
 
         registerErrorHandler(errorHandler: AppErrorHandler): void {
@@ -247,20 +317,24 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
 
             // Add each error schema to components
             Object.entries(errorConfig.errors.content).forEach(([statusCode, errorDef]) => {
-                if (errorDef.schema) {
-                    const schemaName = errorDef.name ? errorDef.name : `Error${statusCode}`;
+                const schema = errorDef instanceof z.ZodType ? errorDef : errorDef.schema;
+                const description =
+                    (errorDef instanceof z.ZodType ? undefined : errorDef.description) ||
+                    getResponseDescription(statusCode);
+                const name = errorDef instanceof z.ZodType ? undefined : errorDef.name;
+
+                if (schema) {
+                    const schemaName = name || `Error${statusCode}`;
                     if (openApiSchema.components?.schemas) {
-                        openApiSchema.components.schemas[schemaName] = z.toJSONSchema(
-                            errorDef.schema,
-                        );
+                        openApiSchema.components.schemas[schemaName] = z.toJSONSchema(schema);
                     }
 
-                    const responseKey = errorDef.name ? errorDef.name : `Error${statusCode}`;
+                    const responseKey = name || `Error${statusCode}`;
                     if (openApiSchema.components?.responses) {
                         (openApiSchema.components.responses as Record<string, unknown>)[
                             responseKey
                         ] = {
-                            description: errorDef.description || getResponseDescription(statusCode),
+                            description,
                             content: {
                                 [defaultContentType]: {
                                     schema: {

@@ -1,6 +1,11 @@
 import {ExpressKit, withContract, AppRoutes, RouteContract} from '@gravity-ui/expresskit';
 import {NodeKit} from '@gravity-ui/nodekit';
 import {z} from 'zod';
+import { createOpenApiRegistry } from '../openapi-registry';
+
+const {registerRoutes} = createOpenApiRegistry({
+  title: 'Super API',
+})
 
 // Define your Zod schemas
 const TaskSchema = z.object({
@@ -76,7 +81,10 @@ const manualValidationHandler = withContract(CreateTaskConfig, {
 // Integrate with your Express/ExpressKit routes
 const routes: AppRoutes = {
   'POST /tasks': createTaskHandler,
+  'POST /manual-tasks': manualValidationHandler,
 };
 
 const nodekit = new NodeKit();
-const app = new ExpressKit(nodekit, routes);
+const app = new ExpressKit(nodekit, registerRoutes(routes));
+
+app.run();
