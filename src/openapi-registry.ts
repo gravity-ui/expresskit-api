@@ -1,6 +1,6 @@
 import type {OpenApiRegistryConfig, OpenApiSchemaObject, SecuritySchemeObject} from './types';
 import * as swaggerUi from 'swagger-ui-express';
-
+ 
 import {
     RouteContract,
     AppErrorHandler,
@@ -229,124 +229,128 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
         }
     }
 
-    return {
-        registerRoute,
+    function reset(): void {
+        openApiSchema.paths = {};
+        if (openApiSchema.components) {
+            openApiSchema.components.schemas = {};
+            openApiSchema.components.securitySchemes = {};
+        }
+    }
 
+    function registerErrorHandler(errorHandler: AppErrorHandler): void {
+        const errorConfig = getErrorContract(errorHandler);
+        if (!errorConfig) return;
+
+        // Ensure components and schemas exist
+        if (!openApiSchema.components) {
+            openApiSchema.components = {};
+        }
+
+        if (!openApiSchema.components.schemas) {
+            openApiSchema.components.schemas = {};
+        }
+
+        // Ensure responses exist
+        if (!openApiSchema.components.responses) {
+            openApiSchema.components.responses = {};
+        }
+
+        const defaultContentType = errorConfig.errors.contentType || 'application/json';
+
+        // Add each error schema to components
+        Object.entries(errorConfig.errors.content).forEach(([statusCode, errorDef]) => {
+            const schema = errorDef instanceof z.ZodType ? errorDef : errorDef.schema;
+            const description =
+                (errorDef instanceof z.ZodType ? undefined : errorDef.description) ||
+                getResponseDescription(statusCode);
+            const name = errorDef instanceof z.ZodType ? undefined : errorDef.name;
+
+            if (schema) {
+                const schemaName = name || `Error${statusCode}`;
+                if (openApiSchema.components?.schemas) {
+                    openApiSchema.components.schemas[schemaName] = z.toJSONSchema(schema);
+                }
+
+                const responseKey = name || `Error${statusCode}`;
+                if (openApiSchema.components?.responses) {
+                    (openApiSchema.components.responses as Record<string, unknown>)[
+                        responseKey
+                    ] = {
+                        description,
+                        content: {
+                            [defaultContentType]: {
+                                schema: {
+                                    $ref: `#/components/schemas/${schemaName}`,
+                                },
+                            },
+                        },
+                    };
+                }
+            }
+        });
+    }
+
+    function registerRoutes(routes: AppRoutes): AppRoutes {
+        const recognizedMethods: readonly HttpMethod[] = [
+            'get',
+            'post',
+            'put',
+            'patch',
+            'delete',
+            'head',
+            'options',
+        ];
+
+        // const buildOpenApiSchema = () => {
+            Object.entries(routes).forEach(([path, handlerOrDescription]) => {
+                const [rawMethod, ...rawPathParts] = path.trim().split(/\s+/);
+                if (!rawMethod || rawPathParts.length === 0) {
+                    return;
+                }
+
+                const methodLower = rawMethod.toLowerCase();
+                if (!recognizedMethods.includes(methodLower as HttpMethod)) {
+                    return;
+                }
+
+                const routePath = rawPathParts.join(' ');
+                const description: AppRouteDescription =
+                    typeof handlerOrDescription === 'function'
+                        ? {handler: handlerOrDescription}
+                        : handlerOrDescription;
+
+                registerRoute(
+                    methodLower as HttpMethod,
+                    routePath,
+                    description.handler,
+                    description.authHandler,
+                );
+            });
+        // };
+
+        // queueMicrotask(buildOpenApiSchema);
+        const options = config.swaggerUi;
+
+        return {
+            ...routes,
+            'MOUNT /api/docs': {
+                handler: ({router}) => {
+                    router.use('/', swaggerUi.serve, swaggerUi.setup(getOpenApiSchema(), options));
+                },
+            },
+        };
+    }
+
+    return {
         registerSecurityScheme,
 
         getOpenApiSchema,
-       
 
-        reset(): void {
-            openApiSchema.paths = {};
-            if (openApiSchema.components) {
-                openApiSchema.components.schemas = {};
-                openApiSchema.components.securitySchemes = {};
-            }
-        },
+        reset,
 
-        registerRoutes(routes: AppRoutes): AppRoutes {
-            const recognizedMethods: readonly HttpMethod[] = [
-                'get',
-                'post',
-                'put',
-                'patch',
-                'delete',
-                'head',
-                'options',
-            ];
+        registerErrorHandler,
 
-            const buildOpenApiSchema = () => {
-                Object.entries(routes).forEach(([path, handlerOrDescription]) => {
-                    const [rawMethod, ...rawPathParts] = path.trim().split(/\s+/);
-                    if (!rawMethod || rawPathParts.length === 0) {
-                        return;
-                    }
-
-                    const methodLower = rawMethod.toLowerCase();
-                    if (!recognizedMethods.includes(methodLower as HttpMethod)) {
-                        return;
-                    }
-
-                    const routePath = rawPathParts.join(' ');
-                    const description: AppRouteDescription =
-                        typeof handlerOrDescription === 'function'
-                            ? {handler: handlerOrDescription}
-                            : handlerOrDescription;
-
-                    registerRoute(
-                        methodLower as HttpMethod,
-                        routePath,
-                        description.handler,
-                        description.authHandler,
-                    );
-                });
-            };
-
-            queueMicrotask(buildOpenApiSchema);
-
-            return {
-                ...routes,
-                'MOUNT /api/docs': {
-                    handler: ({router}) => {
-                        router.use('/', swaggerUi.serve, swaggerUi.setup(getOpenApiSchema()));
-                    },
-                },
-            };
-        },
-
-        registerErrorHandler(errorHandler: AppErrorHandler): void {
-            const errorConfig = getErrorContract(errorHandler);
-            if (!errorConfig) return;
-
-            // Ensure components and schemas exist
-            if (!openApiSchema.components) {
-                openApiSchema.components = {};
-            }
-
-            if (!openApiSchema.components.schemas) {
-                openApiSchema.components.schemas = {};
-            }
-
-            // Ensure responses exist
-            if (!openApiSchema.components.responses) {
-                openApiSchema.components.responses = {};
-            }
-
-            const defaultContentType = errorConfig.errors.contentType || 'application/json';
-
-            // Add each error schema to components
-            Object.entries(errorConfig.errors.content).forEach(([statusCode, errorDef]) => {
-                const schema = errorDef instanceof z.ZodType ? errorDef : errorDef.schema;
-                const description =
-                    (errorDef instanceof z.ZodType ? undefined : errorDef.description) ||
-                    getResponseDescription(statusCode);
-                const name = errorDef instanceof z.ZodType ? undefined : errorDef.name;
-
-                if (schema) {
-                    const schemaName = name || `Error${statusCode}`;
-                    if (openApiSchema.components?.schemas) {
-                        openApiSchema.components.schemas[schemaName] = z.toJSONSchema(schema);
-                    }
-
-                    const responseKey = name || `Error${statusCode}`;
-                    if (openApiSchema.components?.responses) {
-                        (openApiSchema.components.responses as Record<string, unknown>)[
-                            responseKey
-                        ] = {
-                            description,
-                            content: {
-                                [defaultContentType]: {
-                                    schema: {
-                                        $ref: `#/components/schemas/${schemaName}`,
-                                    },
-                                },
-                            },
-                        };
-                    }
-                }
-            });
-        },
+        registerRoutes,
     };
 }
 

@@ -1,3 +1,5 @@
+import type { SwaggerUiOptions } from 'swagger-ui-express';
+ 
 // OpenAPI Security Scheme Object types
 export interface SecuritySchemeObject {
     type: 'apiKey' | 'http' | 'oauth2' | 'openIdConnect';
@@ -59,6 +61,7 @@ export interface OpenApiRegistryConfig {
         url: string;
         description?: string;
     }[];
+    swaggerUi?: SwaggerUiOptions;
 }
 
 // Define a type that matches what swagger-ui-express expects
