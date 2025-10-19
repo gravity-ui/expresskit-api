@@ -260,9 +260,6 @@ const DeleteItemConfig = {
         content: {
             204: {
                 // For 204 No Content, often no schema is needed, or an empty schema.
-                // Zod doesn't have a direct equivalent for an empty schema that translates well to OpenAPI without content.
-                // The OpenAPI generator should ideally omit the content field for 204 if the schema is z.undefined() or z.void().
-                // Using z.undefined() to signify no actual data/body.
                 description: 'Item deleted successfully, no content returned.',
             },
             404: {
@@ -278,10 +275,7 @@ const deleteItemHandler = withContract(DeleteItemConfig)(async (req, res) => {
     // Simulate deletion
     console.log(`Deleting item ${itemId}`);
     // For 204, you typically don't send a body.
-    // res.status(204).send(); or res.status(204).end(); are common.
-    // Using typedJson with an empty object or undefined if schema allows.
-    // If schema is z.undefined(), sending undefined is correct.
-    res.sendTyped(204, undefined);
+    res.sendTyped(204);
 });
 
 // --- Example 5: GET Items (List of Nested Objects) ---

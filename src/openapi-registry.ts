@@ -8,6 +8,7 @@ import {
     AppRouteDescription,
     AppRouteHandler,
     AppRoutes,
+    AppMountHandler,
 } from '@gravity-ui/expresskit';
 import {z} from 'zod';
 import {getErrorContract, getContract} from '@gravity-ui/expresskit';
@@ -301,40 +302,38 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
             'options',
         ];
 
-        // const buildOpenApiSchema = () => {
-            Object.entries(routes).forEach(([path, handlerOrDescription]) => {
-                const [rawMethod, ...rawPathParts] = path.trim().split(/\s+/);
-                if (!rawMethod || rawPathParts.length === 0) {
-                    return;
-                }
+        Object.entries(routes).forEach(([path, handlerOrDescription]) => {
+            const [rawMethod, ...rawPathParts] = path.trim().split(/\s+/);
+            if (!rawMethod || rawPathParts.length === 0) {
+                return;
+            }
 
-                const methodLower = rawMethod.toLowerCase();
-                if (!recognizedMethods.includes(methodLower as HttpMethod)) {
-                    return;
-                }
+            const methodLower = rawMethod.toLowerCase();
+            if (!recognizedMethods.includes(methodLower as HttpMethod)) {
+                return;
+            }
 
-                const routePath = rawPathParts.join(' ');
-                const description: AppRouteDescription =
-                    typeof handlerOrDescription === 'function'
-                        ? {handler: handlerOrDescription}
-                        : handlerOrDescription;
+            const routePath = rawPathParts.join(' ');
+            const description: AppRouteDescription =
+                typeof handlerOrDescription === 'function'
+                    ? {handler: handlerOrDescription}
+                    : handlerOrDescription;
 
-                registerRoute(
-                    methodLower as HttpMethod,
-                    routePath,
-                    description.handler,
-                    description.authHandler,
-                );
-            });
-        // };
+            registerRoute(
+                methodLower as HttpMethod,
+                routePath,
+                description.handler,
+                description.authHandler,
+            );
+        });
 
-        // queueMicrotask(buildOpenApiSchema);
+        const mountPath = config.path ?? '/api/docs';
         const options = config.swaggerUi;
 
         return {
             ...routes,
-            'MOUNT /api/docs': {
-                handler: ({router}) => {
+            [`MOUNT ${mountPath}`]: {
+                handler: ({router}: Parameters<AppMountHandler>[0]) => {
                     router.use('/', swaggerUi.serve, swaggerUi.setup(getOpenApiSchema(), options));
                 },
             },

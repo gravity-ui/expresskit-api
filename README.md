@@ -1,11 +1,123 @@
 # ExpressKit OpenApi Integration
 
-- [Security Schemes for OpenAPI Documentation](#security-schemes-for-openapi-documentation)
+## Quick Start
+
+1. Add the integration to an existing ExpressKit project:
+
+   ```bash
+   npm install @gravity-ui/expresskit-api
+   ```
+
+2. Wrap your routes before passing them to `ExpressKit`:
+
+  ```typescript
+
+  import {ExpressKit, withContract, AppRoutes, RouteContract, AuthPolicy} from '@gravity-ui/expresskit';
+  import {NodeKit} from '@gravity-ui/nodekit';
+  import {z} from 'zod';
+  import {createOpenApiRegistry  , bearerAuth, apiKeyAuth} from '@gravity-ui/expresskit-api';
+
+  const {registerRoutes} = createOpenApiRegistry({title: 'Super API'});
+
+  const apiKeyHandler = apiKeyAuth(
+      'apiKeyAuth', // scheme name
+      'header', // location: 'header', 'query', or 'cookie'
+      'X-API-Key', // parameter name
+      ['read:items'], // optional scopes
+  )(function authenticate(req, res, next) {
+      const apiKey = req.headers['x-api-key'];
+
+      if (apiKey !== 'valid_api_key') {
+          res.status(401).json({error: 'Unauthorized: Invalid API key'});
+          return;
+      }
+
+      next();
+  });
+
+  const CreateItemConfig = {
+      operationId: 'createItem',
+      summary: 'Create a new item',
+      tags: ['Items'],
+      request: {
+          body: z.object({
+              itemName: z.string().min(3, 'Item name must be at least 3 characters long'),
+              quantity: z.number().int().positive('Quantity must be a positive integer'),
+          }),
+      },
+      response: {
+          content: {
+              201: z.object({
+                itemId: z.string(),
+                itemName: z.string(),
+                quantity: z.number().positive(),
+              }),
+          },
+      },
+  } satisfies RouteContract;
+
+  const createItemHandler = withContract(CreateItemConfig)(async (req, res) => {
+      const {itemName, quantity} = req.body;
+
+      const newItem = {
+          itemId: `item_${Date.now()}`,
+          itemName,
+          quantity,
+      };
+
+      res.sendTyped(201, newItem);
+  });
+
+  export const routes: AppRoutes = {
+      'POST /items': {
+          handler: createItemHandler,
+          authHandler: apiKeyHandler,
+          authPolicy: AuthPolicy.required,
+      },
+  };
+
+   const app = new ExpressKit(nodekit, registerRoutes(routes));
+
+   app.run(); // Open http://localhost:3030/api/docs
+   ```
+
+3. Start the app and open [http://localhost:3030/api/docs](http://localhost:3030/api/docs) to view Swagger UI.
+
+## Config
+
+`createOpenApiRegistry(config?: OpenApiRegistryConfig)` tunes both the generated schema and the Swagger UI mount. Key options:
+
+| Field | Default | Description |
+| --- | --- | --- |
+| `title` | `"API Documentation"` | Top-level title shown in the UI. |
+| `version` | `"1.0.0"` | Populates `info.version`. |
+| `description` | `"Generated API documentation"` | Short blurb under the title. |
+| `contact` | `undefined` | `{name, email, url}` for ownership info. |
+| `license` | `undefined` | `{name, url}` displayed in the footer. |
+| `servers` | `[ { url: 'http://localhost:3030' } ]` | Servers array for the spec dropdown. |
+| `swaggerUi` | `{}` | Passed straight to `swagger-ui-express` (`customCss`, `explorer`, themes, …). |
+| `enabled` | `true` | Convenience flag—skip calling `registerRoutes` if you want to hide docs. |
+| `path` | `'/api/docs'` | Mount path for Swagger UI; value is used as-is. |
+
+Usage example:
+
+```typescript
+const {registerRoutes} = createOpenApiRegistry({
+  title: 'Super API',
+  description: 'Internal platform endpoints',
+  servers: [{url: 'https://api.example.com'}],
+  swaggerUi: {
+    explorer: true,
+    customCss: '.topbar { display: none; }',
+  },
+});
+
+```
+
 - [Basic Usage](#basic-usage)
 - [Available Security Scheme Types](#available-security-scheme-types)
 - [Custom Security Schemes](#custom-security-schemes)
-- [How It Works](#how-it-works)
-- [Best Practices](#best-practices)
+- [Styling Swagger UI](#styling-swagger-ui)
 
 ---
 
@@ -122,16 +234,20 @@ const customAuthHandler = withSecurityScheme({
 })(authFunction);
 ```
 
-### How It Works
+## Styling Swagger UI
 
-1. When you wrap an authentication handler with one of the security scheme HOCs, it registers the scheme definition.
-2. The router detects when a route uses an auth handler with a registered security scheme.
-3. The scheme is added to the OpenAPI components.securitySchemes section.
-4. A security requirement referencing the scheme is added to the route operation.
+Customize the Swagger UI via `swaggerUi` options or by bringing in theme helpers such as [`swagger-themes`](https://www.npmjs.com/package/swagger-themes):
 
-### Best Practices
+```typescript
+import {SwaggerTheme, SwaggerThemeNameEnum} from 'swagger-themes';
 
-1. **Consistent Naming**: Use consistent names for your security schemes.
-2. **Documentation**: Add descriptions to your security schemes to explain the required format.
-3. **Scopes**: When using OAuth2 or scoped tokens, be specific about which scopes are required for each endpoint.
-4. **Auth Policy**: The security requirement is only added if the route's auth policy is not disabled.
+const theme = new SwaggerTheme();
+const {registerRoutes} = createOpenApiRegistry({
+  swaggerUi: {
+    explorer: true,
+    customCss: theme.getBuffer(SwaggerThemeNameEnum.DARK),
+  },
+});
+```
+
+See `src/example/index.ts` for a more elaborate setup that combines authentication examples with custom styling.

@@ -64,7 +64,6 @@ export interface OpenApiRegistryConfig {
     swaggerUi?: SwaggerUiOptions;
 }
 
-// Define a type that matches what swagger-ui-express expects
 export interface OpenApiSchemaObject {
     openapi: string;
     info: {
