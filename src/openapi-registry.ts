@@ -9,7 +9,10 @@ import {
     AppRouteHandler,
     AppRoutes,
     AppMountHandler,
+    // AuthPolicy,
 } from '@gravity-ui/expresskit';
+// import type {AppContext} from '@gravity-ui/nodekit';
+import type {RequestHandler} from 'express';
 import {z} from 'zod';
 import {getErrorContract, getContract} from '@gravity-ui/expresskit';
 import {getSecurityScheme} from './security-schemas';
@@ -153,7 +156,7 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
         method: HttpMethod,
         routePath: string,
         routeHandler: AppRouteHandler,
-        authHandler?: AppMiddleware,
+        authHandler?: AppMiddleware | RequestHandler,
     ): void {
         const apiConfig = getContract(routeHandler);
         if (!apiConfig) return;
@@ -174,14 +177,21 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
 
         const pathItem = openApiSchema.paths[openApiPath] || {};
         const operation: Record<string, unknown> = {
-            summary: apiConfig.summary,
-            description: apiConfig.description,
-            tags: apiConfig.tags,
             parameters: [],
             responses: {},
         };
 
-        if (apiConfig.operationId) {
+        // OpenAPI-specific fields (optional, may not be in RouteContract)
+        if ('summary' in apiConfig && apiConfig.summary) {
+            operation.summary = apiConfig.summary;
+        }
+        if ('description' in apiConfig && apiConfig.description) {
+            operation.description = apiConfig.description;
+        }
+        if ('tags' in apiConfig && apiConfig.tags) {
+            operation.tags = apiConfig.tags;
+        }
+        if ('operationId' in apiConfig && apiConfig.operationId) {
             operation.operationId = apiConfig.operationId;
         }
 
@@ -260,16 +270,29 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
 
         // Add each error schema to components
         Object.entries(errorConfig.errors.content).forEach(([statusCode, errorDef]) => {
-            const schema = errorDef instanceof z.ZodType ? errorDef : errorDef.schema;
+            const schema =
+                errorDef instanceof z.ZodType
+                    ? errorDef
+                    : 'schema' in errorDef && errorDef.schema
+                      ? errorDef.schema
+                      : undefined;
             const description =
-                (errorDef instanceof z.ZodType ? undefined : errorDef.description) ||
-                getResponseDescription(statusCode);
-            const name = errorDef instanceof z.ZodType ? undefined : errorDef.name;
+                errorDef instanceof z.ZodType
+                    ? undefined
+                    : 'description' in errorDef && errorDef.description
+                      ? errorDef.description
+                      : getResponseDescription(statusCode);
+            const name =
+                errorDef instanceof z.ZodType
+                    ? undefined
+                    : 'name' in errorDef && errorDef.name
+                      ? errorDef.name
+                      : undefined;
 
             if (schema) {
                 const schemaName = name || `Error${statusCode}`;
                 if (openApiSchema.components?.schemas) {
-                    openApiSchema.components.schemas[schemaName] = z.toJSONSchema(schema);
+                    openApiSchema.components.schemas[schemaName] = z.toJSONSchema(schema as z.ZodType);
                 }
 
                 const responseKey = name || `Error${statusCode}`;
@@ -291,7 +314,7 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
         });
     }
 
-    function registerRoutes(routes: AppRoutes): AppRoutes {
+    function registerRoutes(routes: AppRoutes /*, ctx?: AppContext*/): AppRoutes {
         const recognizedMethods: readonly HttpMethod[] = [
             'get',
             'post',
@@ -319,11 +342,23 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
                     ? {handler: handlerOrDescription}
                     : handlerOrDescription;
 
+            // // Resolve auth handler using the same logic as router.ts
+            // const routeAuthPolicy =
+            //     description.authPolicy ||
+            //     (ctx?.config && 'appAuthPolicy' in ctx.config ? ctx.config.appAuthPolicy : undefined) ||
+            //     `${AuthPolicy.disabled}`;
+
+            // const authHandler =
+            //     routeAuthPolicy === AuthPolicy.disabled
+            //         ? undefined
+            //         : description.authHandler ||
+            //           (ctx?.config && 'appAuthHandler' in ctx.config ? ctx.config.appAuthHandler : undefined);
+
             registerRoute(
                 methodLower as HttpMethod,
                 routePath,
                 description.handler,
-                description.authHandler,
+               // authHandler,
             );
         });
 
@@ -334,7 +369,7 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
             ...routes,
             [`MOUNT ${mountPath}`]: {
                 handler: ({router}: Parameters<AppMountHandler>[0]) => {
-                    router.use('/', swaggerUi.serve, swaggerUi.setup(getOpenApiSchema(), options));
+                    router.use('/', swaggerUi.serve as any, swaggerUi.setup(getOpenApiSchema(), options) as any);
                 },
             },
         };

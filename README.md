@@ -10,6 +10,8 @@
 
 2. Wrap your routes before passing them to `ExpressKit`:
 
+  **Simple approach** (without global auth handlers):
+
   ```typescript
 
   import {ExpressKit, withContract, AppRoutes, RouteContract, AuthPolicy} from '@gravity-ui/expresskit';
@@ -80,6 +82,56 @@
 
    app.run(); // Open http://localhost:3030/api/docs
    ```
+
+  **Using setup parameter** (with global auth handlers support):
+
+  ```typescript
+  import {ExpressKit, withContract, AppRoutes, RouteContract, AuthPolicy} from '@gravity-ui/expresskit';
+  import {NodeKit} from '@gravity-ui/nodekit';
+  import {z} from 'zod';
+  import {createOpenApiRegistry, bearerAuth} from '@gravity-ui/expresskit-api';
+
+  const {registerRoutes} = createOpenApiRegistry({title: 'Super API'});
+
+  // Global auth handler configured in NodeKit
+  const globalAuthHandler = bearerAuth('jwtAuth')(function authenticate(req, res, next) {
+      const token = req.headers.authorization?.replace('Bearer ', '');
+      if (token !== 'valid_token') {
+          res.status(401).json({error: 'Unauthorized'});
+          return;
+      }
+      next();
+  });
+
+  const nodekit = new NodeKit({
+      config: {
+          appAuthHandler: globalAuthHandler,
+          appAuthPolicy: AuthPolicy.required,
+      },
+  });
+
+  const routes: AppRoutes = {
+      'POST /items': {
+          handler: createItemHandler,
+          // No authHandler specified - will use global appAuthHandler
+      },
+  };
+
+  // Use setup parameter to access nodekit context
+  const app = new ExpressKit(nodekit, routes, ({nodekit, setupRoutes, setupBaseMiddleware, setupLangMiddleware, setupParsers, setupErrorHandlers}) => {
+      setupBaseMiddleware();
+      setupLangMiddleware();
+      setupParsers();
+      
+      // Register routes with context to access global auth handlers
+      const registeredRoutes = registerRoutes(routes, nodekit.ctx);
+      setupRoutes(registeredRoutes);
+      
+      setupErrorHandlers();
+  });
+
+  app.run(); // Open http://localhost:3030/api/docs
+  ```
 
 3. Start the app and open [http://localhost:3030/api/docs](http://localhost:3030/api/docs) to view Swagger UI.
 

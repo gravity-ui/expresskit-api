@@ -1,4 +1,4 @@
-import {ExpressKit, withContract, AppRoutes, RouteContract, AuthPolicy} from '@gravity-ui/expresskit';
+import {ExpressKit, withContract, AppRoutes, RouteContract, AuthPolicy, SetupParams} from '@gravity-ui/expresskit';
 import {NodeKit} from '@gravity-ui/nodekit';
 import {z} from 'zod';
 import { createOpenApiRegistry  , bearerAuth, apiKeyAuth } from '../';
@@ -353,7 +353,19 @@ export const routes: AppRoutes = {
 };
 
 const nodekit = new NodeKit();
-const app = new ExpressKit(nodekit, registerRoutes(routes));
+
+// Use setup parameter to integrate OpenAPI registry with access to global auth handlers
+const app = new ExpressKit(nodekit, routes, ({routes, setupRoutes, setupBaseMiddleware, setupLangMiddleware, setupParsers, setupErrorHandlers}: SetupParams) => {
+    setupBaseMiddleware();
+    setupLangMiddleware();
+    setupParsers();
+    
+    // Register routes with context to access global auth handlers from config
+    const registeredRoutes = registerRoutes(routes /*, nodekit.ctx*/);
+    setupRoutes(registeredRoutes);
+    
+    setupErrorHandlers();
+});
 
 app.run();
 
