@@ -10,128 +10,140 @@
 
 2. Wrap your routes before passing them to `ExpressKit`:
 
-  **Simple approach** (without global auth handlers):
+   **Simple approach** (without global auth handlers):
 
-  ```typescript
+```typescript
+import {
+  ExpressKit,
+  withContract,
+  AppRoutes,
+  RouteContract,
+  AuthPolicy,
+} from "@gravity-ui/expresskit";
+import { NodeKit } from "@gravity-ui/nodekit";
+import { z } from "zod";
+import {
+  createOpenApiRegistry,
+  bearerAuth,
+  apiKeyAuth,
+} from "@gravity-ui/expresskit-api";
 
-  import {ExpressKit, withContract, AppRoutes, RouteContract, AuthPolicy} from '@gravity-ui/expresskit';
-  import {NodeKit} from '@gravity-ui/nodekit';
-  import {z} from 'zod';
-  import {createOpenApiRegistry  , bearerAuth, apiKeyAuth} from '@gravity-ui/expresskit-api';
+const { registerRoutes } = createOpenApiRegistry({ title: "Super API" });
 
-  const {registerRoutes} = createOpenApiRegistry({title: 'Super API'});
+const apiKeyHandler = apiKeyAuth(
+  "apiKeyAuth", // scheme name
+  "header", // location: 'header', 'query', or 'cookie'
+  "X-API-Key", // parameter name
+  ["read:items"], // optional scopes
+)(function authenticate(req, res, next) {
+  const apiKey = req.headers["x-api-key"];
 
-  const apiKeyHandler = apiKeyAuth(
-      'apiKeyAuth', // scheme name
-      'header', // location: 'header', 'query', or 'cookie'
-      'X-API-Key', // parameter name
-      ['read:items'], // optional scopes
-  )(function authenticate(req, res, next) {
-      const apiKey = req.headers['x-api-key'];
+  if (apiKey !== "valid_api_key") {
+    res.status(401).json({ error: "Unauthorized: Invalid API key" });
+    return;
+  }
 
-      if (apiKey !== 'valid_api_key') {
-          res.status(401).json({error: 'Unauthorized: Invalid API key'});
-          return;
-      }
+  next();
+});
 
-      next();
-  });
+const CreateItemConfig = {
+  operationId: "createItem",
+  summary: "Create a new item",
+  tags: ["Items"],
+  request: {
+    body: z.object({
+      itemName: z
+        .string()
+        .min(3, "Item name must be at least 3 characters long"),
+      quantity: z
+        .number()
+        .int()
+        .positive("Quantity must be a positive integer"),
+    }),
+  },
+  response: {
+    content: {
+      201: z.object({
+        itemId: z.string(),
+        itemName: z.string(),
+        quantity: z.number().positive(),
+      }),
+    },
+  },
+} satisfies RouteContract;
 
-  const CreateItemConfig = {
-      operationId: 'createItem',
-      summary: 'Create a new item',
-      tags: ['Items'],
-      request: {
-          body: z.object({
-              itemName: z.string().min(3, 'Item name must be at least 3 characters long'),
-              quantity: z.number().int().positive('Quantity must be a positive integer'),
-          }),
-      },
-      response: {
-          content: {
-              201: z.object({
-                itemId: z.string(),
-                itemName: z.string(),
-                quantity: z.number().positive(),
-              }),
-          },
-      },
-  } satisfies RouteContract;
+const createItemHandler = withContract(CreateItemConfig)(async (req, res) => {
+  const { itemName, quantity } = req.body;
 
-  const createItemHandler = withContract(CreateItemConfig)(async (req, res) => {
-      const {itemName, quantity} = req.body;
-
-      const newItem = {
-          itemId: `item_${Date.now()}`,
-          itemName,
-          quantity,
-      };
-
-      res.sendTyped(201, newItem);
-  });
-
-  export const routes: AppRoutes = {
-      'POST /items': {
-          handler: createItemHandler,
-          authHandler: apiKeyHandler,
-          authPolicy: AuthPolicy.required,
-      },
+  const newItem = {
+    itemId: `item_${Date.now()}`,
+    itemName,
+    quantity,
   };
 
-   const app = new ExpressKit(nodekit, registerRoutes(routes));
+  res.sendTyped(201, newItem);
+});
 
-   app.run(); // Open http://localhost:3030/api/docs
-   ```
+export const routes: AppRoutes = {
+  "POST /items": {
+    handler: createItemHandler,
+    authHandler: apiKeyHandler,
+    authPolicy: AuthPolicy.required,
+  },
+};
 
-  **Using setup parameter** (with global auth handlers support):
+const app = new ExpressKit(nodekit, registerRoutes(routes));
 
-  ```typescript
-  import {ExpressKit, withContract, AppRoutes, RouteContract, AuthPolicy} from '@gravity-ui/expresskit';
-  import {NodeKit} from '@gravity-ui/nodekit';
-  import {z} from 'zod';
-  import {createOpenApiRegistry, bearerAuth} from '@gravity-ui/expresskit-api';
+app.run(); // Open http://localhost:3030/api/docs
+```
 
-  const {registerRoutes} = createOpenApiRegistry({title: 'Super API'});
+**Using setup parameter** (with global auth handlers support):
 
-  // Global auth handler configured in NodeKit
-  const globalAuthHandler = bearerAuth('jwtAuth')(function authenticate(req, res, next) {
-      const token = req.headers.authorization?.replace('Bearer ', '');
-      if (token !== 'valid_token') {
-          res.status(401).json({error: 'Unauthorized'});
-          return;
-      }
-      next();
-  });
+```typescript
+import {
+  ExpressKit,
+  withContract,
+  AppRoutes,
+  RouteContract,
+  AuthPolicy,
+} from "@gravity-ui/expresskit";
+import { NodeKit } from "@gravity-ui/nodekit";
+import { z } from "zod";
+import { createOpenApiRegistry, bearerAuth } from "@gravity-ui/expresskit-api";
 
-  const nodekit = new NodeKit({
-      config: {
-          appAuthHandler: globalAuthHandler,
-          appAuthPolicy: AuthPolicy.required,
-      },
-  });
+const { registerRoutes } = createOpenApiRegistry({ title: "Super API" });
 
-  const routes: AppRoutes = {
-      'POST /items': {
-          handler: createItemHandler,
-          // No authHandler specified - will use global appAuthHandler
-      },
-  };
+// Global auth handler configured in NodeKit
+const globalAuthHandler = bearerAuth("jwtAuth")(
+  function authenticate(req, res, next) {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (token !== "valid_token") {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+    next();
+  },
+);
 
-  // Use setup parameter to access nodekit context
-  const app = new ExpressKit(nodekit, routes, ({nodekit, setupRoutes, setupBaseMiddleware, setupLangMiddleware, setupParsers, setupErrorHandlers}) => {
-      setupBaseMiddleware();
-      setupLangMiddleware();
-      setupParsers();
-      
-      // Register routes with context to access global auth handlers
-      const registeredRoutes = registerRoutes(routes, nodekit.ctx);
-      setupRoutes(registeredRoutes);
-      
-      setupErrorHandlers();
-  });
+const nodekit = new NodeKit({
+  config: {
+    appAuthHandler: globalAuthHandler,
+    appAuthPolicy: AuthPolicy.required,
+  },
+});
 
-  app.run(); // Open http://localhost:3030/api/docs
-  ```
+const routes: AppRoutes = {
+  "POST /items": {
+    handler: createItemHandler,
+    // No authHandler specified - will use global appAuthHandler
+  },
+};
+
+// Use setup parameter to access nodekit context
+const app = new ExpressKit(nodekit, registerRoutes(routes, nodekit));
+
+app.run(); // Open http://localhost:3030/api/docs
+```
 
 3. Start the app and open [http://localhost:3030/api/docs](http://localhost:3030/api/docs) to view Swagger UI.
 
@@ -139,31 +151,30 @@
 
 `createOpenApiRegistry(config?: OpenApiRegistryConfig)` tunes both the generated schema and the Swagger UI mount. Key options:
 
-| Field | Default | Description |
-| --- | --- | --- |
-| `title` | `"API Documentation"` | Top-level title shown in the UI. |
-| `version` | `"1.0.0"` | Populates `info.version`. |
-| `description` | `"Generated API documentation"` | Short blurb under the title. |
-| `contact` | `undefined` | `{name, email, url}` for ownership info. |
-| `license` | `undefined` | `{name, url}` displayed in the footer. |
-| `servers` | `[ { url: 'http://localhost:3030' } ]` | Servers array for the spec dropdown. |
-| `swaggerUi` | `{}` | Passed straight to `swagger-ui-express` (`customCss`, `explorer`, themes, …). |
-| `enabled` | `true` | Convenience flag—skip calling `registerRoutes` if you want to hide docs. |
-| `path` | `'/api/docs'` | Mount path for Swagger UI; value is used as-is. |
+| Field         | Default                                | Description                                                                   |
+| ------------- | -------------------------------------- | ----------------------------------------------------------------------------- |
+| `title`       | `"API Documentation"`                  | Top-level title shown in the UI.                                              |
+| `version`     | `"1.0.0"`                              | Populates `info.version`.                                                     |
+| `description` | `"Generated API documentation"`        | Short blurb under the title.                                                  |
+| `contact`     | `undefined`                            | `{name, email, url}` for ownership info.                                      |
+| `license`     | `undefined`                            | `{name, url}` displayed in the footer.                                        |
+| `servers`     | `[ { url: 'http://localhost:3030' } ]` | Servers array for the spec dropdown.                                          |
+| `swaggerUi`   | `{}`                                   | Passed straight to `swagger-ui-express` (`customCss`, `explorer`, themes, …). |
+| `enabled`     | `true`                                 | Convenience flag—skip calling `registerRoutes` if you want to hide docs.      |
+| `path`        | `'/api/docs'`                          | Mount path for Swagger UI; value is used as-is.                               |
 
 Usage example:
 
 ```typescript
-const {registerRoutes} = createOpenApiRegistry({
-  title: 'Super API',
-  description: 'Internal platform endpoints',
-  servers: [{url: 'https://api.example.com'}],
+const { registerRoutes } = createOpenApiRegistry({
+  title: "Super API",
+  description: "Internal platform endpoints",
+  servers: [{ url: "https://api.example.com" }],
   swaggerUi: {
     explorer: true,
-    customCss: '.topbar { display: none; }',
+    customCss: ".topbar { display: none; }",
   },
 });
-
 ```
 
 - [Basic Usage](#basic-usage)
@@ -191,18 +202,20 @@ ExpressKit supports automatic generation of security requirements in OpenAPI doc
 ### Basic Usage
 
 ```typescript
-import {bearerAuth} from 'expresskit';
-import jwt from 'jsonwebtoken';
+import { bearerAuth } from "expresskit";
+import jwt from "jsonwebtoken";
 
 // Add OpenAPI security scheme metadata to your auth handler
-const jwtAuthHandler = bearerAuth('myJwtAuth')(function authenticate(req, res, next) {
-  // Your authentication logic here
-  next();
-});
+const jwtAuthHandler = bearerAuth("myJwtAuth")(
+  function authenticate(req, res, next) {
+    // Your authentication logic here
+    next();
+  },
+);
 
 // Use in routes
 const routes = {
-  'GET /api/protected': {
+  "GET /api/protected": {
     handler: protectedRouteHandler,
     authHandler: jwtAuthHandler,
   },
@@ -215,8 +228,8 @@ const routes = {
 
 ```typescript
 const jwtAuthHandler = bearerAuth(
-  'jwtAuth', // scheme name in OpenAPI docs
-  ['read:users', 'write:users'], // optional scopes
+  "jwtAuth", // scheme name in OpenAPI docs
+  ["read:users", "write:users"], // optional scopes
 )(authFunction);
 ```
 
@@ -224,10 +237,10 @@ const jwtAuthHandler = bearerAuth(
 
 ```typescript
 const apiKeyHandler = apiKeyAuth(
-  'apiKeyAuth', // scheme name
-  'header', // location: 'header', 'query', or 'cookie'
-  'X-API-Key', // parameter name
-  ['read', 'write'], // optional scopes
+  "apiKeyAuth", // scheme name
+  "header", // location: 'header', 'query', or 'cookie'
+  "X-API-Key", // parameter name
+  ["read", "write"], // optional scopes
 )(authFunction);
 ```
 
@@ -235,8 +248,8 @@ const apiKeyHandler = apiKeyAuth(
 
 ```typescript
 const basicAuthHandler = basicAuth(
-  'basicAuth', // scheme name
-  ['read', 'write'], // optional scopes
+  "basicAuth", // scheme name
+  ["read", "write"], // optional scopes
 )(authFunction);
 ```
 
@@ -244,17 +257,17 @@ const basicAuthHandler = basicAuth(
 
 ```typescript
 const oauth2Handler = oauth2Auth(
-  'oauth2Auth', // scheme name
+  "oauth2Auth", // scheme name
   {
     implicit: {
-      authorizationUrl: 'https://example.com/oauth/authorize',
+      authorizationUrl: "https://example.com/oauth/authorize",
       scopes: {
-        read: 'Read access',
-        write: 'Write access',
+        read: "Read access",
+        write: "Write access",
       },
     },
   },
-  ['read', 'write'], // optional scopes for this specific handler
+  ["read", "write"], // optional scopes for this specific handler
 )(authFunction);
 ```
 
@@ -262,9 +275,9 @@ const oauth2Handler = oauth2Auth(
 
 ```typescript
 const oidcHandler = oidcAuth(
-  'oidcAuth', // scheme name
-  'https://example.com/.well-known/openid-configuration',
-  ['profile', 'email'], // optional scopes
+  "oidcAuth", // scheme name
+  "https://example.com/.well-known/openid-configuration",
+  ["profile", "email"], // optional scopes
 )(authFunction);
 ```
 
@@ -273,16 +286,16 @@ const oidcHandler = oidcAuth(
 If you need a custom security scheme, you can use the `withSecurityScheme` function directly:
 
 ```typescript
-import {withSecurityScheme} from 'expresskit';
+import { withSecurityScheme } from "expresskit";
 
 const customAuthHandler = withSecurityScheme({
-  name: 'myCustomScheme',
+  name: "myCustomScheme",
   scheme: {
-    type: 'http',
-    scheme: 'digest',
-    description: 'Digest authentication',
+    type: "http",
+    scheme: "digest",
+    description: "Digest authentication",
   },
-  scopes: ['read', 'write'],
+  scopes: ["read", "write"],
 })(authFunction);
 ```
 
@@ -291,10 +304,10 @@ const customAuthHandler = withSecurityScheme({
 Customize the Swagger UI via `swaggerUi` options or by bringing in theme helpers such as [`swagger-themes`](https://www.npmjs.com/package/swagger-themes):
 
 ```typescript
-import {SwaggerTheme, SwaggerThemeNameEnum} from 'swagger-themes';
+import { SwaggerTheme, SwaggerThemeNameEnum } from "swagger-themes";
 
 const theme = new SwaggerTheme();
-const {registerRoutes} = createOpenApiRegistry({
+const { registerRoutes } = createOpenApiRegistry({
   swaggerUi: {
     explorer: true,
     customCss: theme.getBuffer(SwaggerThemeNameEnum.DARK),
