@@ -1,7 +1,7 @@
 {
   "name": "@gravity-ui/expresskit-api",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "lint": "npm run lint:code && npm run lint:other",
     "lint:code": "eslint --ext .js,.ts .",
