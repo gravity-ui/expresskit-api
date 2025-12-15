@@ -2,7 +2,6 @@ import type { AppAuthHandler } from "@gravity-ui/expresskit";
 import type { RequestHandler } from "express";
 import type { SecuritySchemeObject } from "./types";
 
-// WeakMap to store security scheme definitions for auth handlers
 const securitySchemesRegistry = new WeakMap<
   AppAuthHandler | RequestHandler,
   SecuritySchemeDefinition

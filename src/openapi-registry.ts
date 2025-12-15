@@ -69,7 +69,6 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
     return descriptions[statusCode] || "Response";
   }
 
-  // Helper function to create parameters for an operation
   function createParameters(
     paramType: "query" | "path" | "header",
     schema: z.ZodType,
@@ -88,7 +87,6 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
     }));
   }
 
-  // Helper function to create a request body
   function createRequestBody(
     bodySchema: z.ZodType,
     contentTypes: string[] = ["application/json"],
@@ -105,7 +103,6 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
     return { required: true, content };
   }
 
-  // Helper function to create responses
   function createResponses(
     responseConfig?: RouteContract["response"],
   ): Record<string, unknown> {
@@ -193,7 +190,6 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
       responses: {},
     };
 
-    // OpenAPI-specific fields (optional, may not be in RouteContract)
     if ("summary" in apiConfig && apiConfig.summary) {
       operation.summary = apiConfig.summary;
     }
@@ -269,7 +265,6 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
     const errorConfig = getErrorContract(errorHandler);
     if (!errorConfig) return;
 
-    // Ensure components and schemas exist
     if (!openApiSchema.components) {
       openApiSchema.components = {};
     }
@@ -278,7 +273,6 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
       openApiSchema.components.schemas = {};
     }
 
-    // Ensure responses exist
     if (!openApiSchema.components.responses) {
       openApiSchema.components.responses = {};
     }
@@ -286,7 +280,6 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
     const defaultContentType =
       errorConfig.errors.contentType || "application/json";
 
-    // Add each error schema to components
     Object.entries(errorConfig.errors.content).forEach(
       ([statusCode, errorDef]) => {
         let schema: z.ZodType | undefined;
@@ -368,7 +361,6 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
           ? { handler: handlerOrDescription }
           : handlerOrDescription;
 
-      // // Resolve auth handler using the same logic as router.ts
       const routeAuthPolicy =
         description.authPolicy ||
         (ctx?.config && "appAuthPolicy" in ctx.config

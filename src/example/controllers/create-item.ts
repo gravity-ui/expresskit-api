@@ -53,9 +53,10 @@ export const createItemHandler = withContract(CreateItemConfig)(async (
   }
 
   const newItem = {
-    itemId: `item_${Date.now()}`, // wrong contract for example purposes, will cause serialization error
+    itemId: "123e4567-e89b-12d3-a456-426614174000",
     itemName,
     quantity,
   };
+
   res.sendValidated(201, newItem);
 });
