@@ -1,17 +1,9 @@
 /* eslint-disable no-console */
-import { AppRoutes, AuthPolicy, ExpressKit } from "@gravity-ui/expresskit";
+import { ExpressKit } from "@gravity-ui/expresskit";
 import { NodeKit } from "@gravity-ui/nodekit";
 import { createOpenApiRegistry } from "../";
 import { SwaggerTheme, SwaggerThemeNameEnum } from "swagger-themes";
-import { jwtAuthHandler } from "./auth/jwt-auth";
-import { apiKeyHandler } from "./auth/api-key-auth";
-import {
-  createItemHandler,
-  deleteItemHandler,
-  getItemsHandler,
-  getUserHandler,
-  updateUserEmailHandler,
-} from "./controllers";
+import { routes } from "./routes";
 
 const theme = new SwaggerTheme();
 const { registerRoutes } = createOpenApiRegistry({
@@ -21,30 +13,6 @@ const { registerRoutes } = createOpenApiRegistry({
     customCss: theme.getBuffer(SwaggerThemeNameEnum.DARK),
   },
 });
-
-export const routes: AppRoutes = {
-  "GET /users/:userId": {
-    handler: getUserHandler,
-    authHandler: jwtAuthHandler,
-    authPolicy: AuthPolicy.required,
-  },
-  "POST /items": {
-    handler: createItemHandler,
-    authHandler: apiKeyHandler,
-    authPolicy: AuthPolicy.required,
-  },
-  "PUT /users/:userId/email": {
-    handler: updateUserEmailHandler,
-    authHandler: jwtAuthHandler,
-    authPolicy: AuthPolicy.required,
-  },
-  "DELETE /items/:itemId": {
-    handler: deleteItemHandler,
-    authHandler: apiKeyHandler,
-    authPolicy: AuthPolicy.required,
-  },
-  "GET /items": getItemsHandler,
-};
 
 const nodekit = new NodeKit({
   config: {

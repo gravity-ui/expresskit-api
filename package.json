@@ -1,6 +1,7 @@
 {
   "name": "@gravity-ui/expresskit-api",
   "version": "1.0.0",
+  "description": "ExpressKit OpenApi Integration",
   "main": "dist/index.js",
   "scripts": {
     "lint": "npm run lint:code && npm run lint:other",
@@ -19,13 +20,15 @@
     "type": "git",
     "url": "git+https://github.com/gravity-ui/expresskit-api.git"
   },
-  "author": "",
-  "license": "ISC",
+  "files": [
+    "dist"
+  ],
+  "author": "Gravity UI Team",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/gravity-ui/expresskit-api/issues"
   },
   "homepage": "https://github.com/gravity-ui/expresskit-api#readme",
-  "description": "",
   "devDependencies": {
     "@commitlint/cli": "^17.7.1",
     "@commitlint/config-conventional": "^17.7.0",
