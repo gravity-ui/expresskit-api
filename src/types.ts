@@ -62,6 +62,7 @@ export interface OpenApiRegistryConfig {
     description?: string;
   }[];
   swaggerUi?: SwaggerUiOptions;
+  swaggerJsonPath?: string;
 }
 
 export interface OpenApiSchemaObject {

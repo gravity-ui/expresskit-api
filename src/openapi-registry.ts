@@ -386,12 +386,33 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
 
     const mountPath = config.path ?? "/api/docs";
     const options = config.swaggerUi;
+    const swaggerJsonPath = config.swaggerJsonPath;
 
     return {
       ...routes,
       [`MOUNT ${mountPath}`]: {
         handler: ({ router }: Parameters<AppMountHandler>[0]) => {
-          router.use("/", serve, setup(getOpenApiSchema(), options));
+          if (swaggerJsonPath) {
+            router.get(swaggerJsonPath, (_req, res) => {
+              res.json(getOpenApiSchema());
+            });
+
+            const relativePath = swaggerJsonPath.startsWith("/")
+              ? swaggerJsonPath.slice(1)
+              : swaggerJsonPath;
+
+            const asyncOptions = {
+              ...options,
+              swaggerOptions: {
+                ...options?.swaggerOptions,
+                url: relativePath,
+              },
+            };
+
+            router.use("/", serve, setup(null, asyncOptions));
+          } else {
+            router.use("/", serve, setup(getOpenApiSchema(), options));
+          }
         },
       },
     };
