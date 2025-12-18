@@ -19,27 +19,23 @@ import {
   AppRoutes,
   RouteContract,
   AuthPolicy,
-} from "@gravity-ui/expresskit";
-import { NodeKit } from "@gravity-ui/nodekit";
-import { z } from "zod";
-import {
-  createOpenApiRegistry,
-  bearerAuth,
-  apiKeyAuth,
-} from "@gravity-ui/expresskit-api";
+} from '@gravity-ui/expresskit';
+import {NodeKit} from '@gravity-ui/nodekit';
+import {z} from 'zod';
+import {createOpenApiRegistry, bearerAuth, apiKeyAuth} from '@gravity-ui/expresskit-api';
 
-const { registerRoutes } = createOpenApiRegistry({ title: "Super API" });
+const {registerRoutes} = createOpenApiRegistry({title: 'Super API'});
 
 const apiKeyHandler = apiKeyAuth(
-  "apiKeyAuth", // scheme name
-  "header", // location: 'header', 'query', or 'cookie'
-  "X-API-Key", // parameter name
-  ["read:items"], // optional scopes
+  'apiKeyAuth', // scheme name
+  'header', // location: 'header', 'query', or 'cookie'
+  'X-API-Key', // parameter name
+  ['read:items'], // optional scopes
 )(function authenticate(req, res, next) {
-  const apiKey = req.headers["x-api-key"];
+  const apiKey = req.headers['x-api-key'];
 
-  if (apiKey !== "valid_api_key") {
-    res.status(401).json({ error: "Unauthorized: Invalid API key" });
+  if (apiKey !== 'valid_api_key') {
+    res.status(401).json({error: 'Unauthorized: Invalid API key'});
     return;
   }
 
@@ -47,18 +43,13 @@ const apiKeyHandler = apiKeyAuth(
 });
 
 const CreateItemConfig = {
-  operationId: "createItem",
-  summary: "Create a new item",
-  tags: ["Items"],
+  operationId: 'createItem',
+  summary: 'Create a new item',
+  tags: ['Items'],
   request: {
     body: z.object({
-      itemName: z
-        .string()
-        .min(3, "Item name must be at least 3 characters long"),
-      quantity: z
-        .number()
-        .int()
-        .positive("Quantity must be a positive integer"),
+      itemName: z.string().min(3, 'Item name must be at least 3 characters long'),
+      quantity: z.number().int().positive('Quantity must be a positive integer'),
     }),
   },
   response: {
@@ -73,7 +64,7 @@ const CreateItemConfig = {
 } satisfies RouteContract;
 
 const createItemHandler = withContract(CreateItemConfig)(async (req, res) => {
-  const { itemName, quantity } = req.body;
+  const {itemName, quantity} = req.body;
 
   const newItem = {
     itemId: `item_${Date.now()}`,
@@ -85,7 +76,7 @@ const createItemHandler = withContract(CreateItemConfig)(async (req, res) => {
 });
 
 export const routes: AppRoutes = {
-  "POST /items": {
+  'POST /items': {
     handler: createItemHandler,
     authHandler: apiKeyHandler,
     authPolicy: AuthPolicy.required,
@@ -106,24 +97,22 @@ import {
   AppRoutes,
   RouteContract,
   AuthPolicy,
-} from "@gravity-ui/expresskit";
-import { NodeKit } from "@gravity-ui/nodekit";
-import { z } from "zod";
-import { createOpenApiRegistry, bearerAuth } from "@gravity-ui/expresskit-api";
+} from '@gravity-ui/expresskit';
+import {NodeKit} from '@gravity-ui/nodekit';
+import {z} from 'zod';
+import {createOpenApiRegistry, bearerAuth} from '@gravity-ui/expresskit-api';
 
-const { registerRoutes } = createOpenApiRegistry({ title: "Super API" });
+const {registerRoutes} = createOpenApiRegistry({title: 'Super API'});
 
 // Global auth handler configured in NodeKit
-const globalAuthHandler = bearerAuth("jwtAuth")(
-  function authenticate(req, res, next) {
-    const token = req.headers.authorization?.replace("Bearer ", "");
-    if (token !== "valid_token") {
-      res.status(401).json({ error: "Unauthorized" });
-      return;
-    }
-    next();
-  },
-);
+const globalAuthHandler = bearerAuth('jwtAuth')(function authenticate(req, res, next) {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (token !== 'valid_token') {
+    res.status(401).json({error: 'Unauthorized'});
+    return;
+  }
+  next();
+});
 
 const nodekit = new NodeKit({
   config: {
@@ -133,7 +122,7 @@ const nodekit = new NodeKit({
 });
 
 const routes: AppRoutes = {
-  "POST /items": {
+  'POST /items': {
     handler: createItemHandler,
     // No authHandler specified - will use global appAuthHandler
   },
@@ -167,13 +156,13 @@ app.run(); // Open http://localhost:3030/api/docs
 Usage example:
 
 ```typescript
-const { registerRoutes } = createOpenApiRegistry({
-  title: "Super API",
-  description: "Internal platform endpoints",
-  servers: [{ url: "https://api.example.com" }],
+const {registerRoutes} = createOpenApiRegistry({
+  title: 'Super API',
+  description: 'Internal platform endpoints',
+  servers: [{url: 'https://api.example.com'}],
   swaggerUi: {
     explorer: true,
-    customCss: ".topbar { display: none; }",
+    customCss: '.topbar { display: none; }',
   },
 });
 ```
@@ -181,10 +170,10 @@ const { registerRoutes } = createOpenApiRegistry({
 **Using `swaggerJsonPath` for async schema loading:**
 
 ```typescript
-const { registerRoutes } = createOpenApiRegistry({
-  title: "Super API",
-  path: "/api/docs",
-  swaggerJsonPath: "/swagger.json", // Relative to mount path
+const {registerRoutes} = createOpenApiRegistry({
+  title: 'Super API',
+  path: '/api/docs',
+  swaggerJsonPath: '/swagger.json', // Relative to mount path
 });
 
 // The schema will be available at /api/docs/swagger.json
@@ -216,20 +205,18 @@ ExpressKit supports automatic generation of security requirements in OpenAPI doc
 ### Basic Usage
 
 ```typescript
-import { bearerAuth } from "expresskit";
-import jwt from "jsonwebtoken";
+import {bearerAuth} from 'expresskit';
+import jwt from 'jsonwebtoken';
 
 // Add OpenAPI security scheme metadata to your auth handler
-const jwtAuthHandler = bearerAuth("myJwtAuth")(
-  function authenticate(req, res, next) {
-    // Your authentication logic here
-    next();
-  },
-);
+const jwtAuthHandler = bearerAuth('myJwtAuth')(function authenticate(req, res, next) {
+  // Your authentication logic here
+  next();
+});
 
 // Use in routes
 const routes = {
-  "GET /api/protected": {
+  'GET /api/protected': {
     handler: protectedRouteHandler,
     authHandler: jwtAuthHandler,
   },
@@ -242,8 +229,8 @@ const routes = {
 
 ```typescript
 const jwtAuthHandler = bearerAuth(
-  "jwtAuth", // scheme name in OpenAPI docs
-  ["read:users", "write:users"], // optional scopes
+  'jwtAuth', // scheme name in OpenAPI docs
+  ['read:users', 'write:users'], // optional scopes
 )(authFunction);
 ```
 
@@ -251,10 +238,10 @@ const jwtAuthHandler = bearerAuth(
 
 ```typescript
 const apiKeyHandler = apiKeyAuth(
-  "apiKeyAuth", // scheme name
-  "header", // location: 'header', 'query', or 'cookie'
-  "X-API-Key", // parameter name
-  ["read", "write"], // optional scopes
+  'apiKeyAuth', // scheme name
+  'header', // location: 'header', 'query', or 'cookie'
+  'X-API-Key', // parameter name
+  ['read', 'write'], // optional scopes
 )(authFunction);
 ```
 
@@ -262,8 +249,8 @@ const apiKeyHandler = apiKeyAuth(
 
 ```typescript
 const basicAuthHandler = basicAuth(
-  "basicAuth", // scheme name
-  ["read", "write"], // optional scopes
+  'basicAuth', // scheme name
+  ['read', 'write'], // optional scopes
 )(authFunction);
 ```
 
@@ -271,17 +258,17 @@ const basicAuthHandler = basicAuth(
 
 ```typescript
 const oauth2Handler = oauth2Auth(
-  "oauth2Auth", // scheme name
+  'oauth2Auth', // scheme name
   {
     implicit: {
-      authorizationUrl: "https://example.com/oauth/authorize",
+      authorizationUrl: 'https://example.com/oauth/authorize',
       scopes: {
-        read: "Read access",
-        write: "Write access",
+        read: 'Read access',
+        write: 'Write access',
       },
     },
   },
-  ["read", "write"], // optional scopes for this specific handler
+  ['read', 'write'], // optional scopes for this specific handler
 )(authFunction);
 ```
 
@@ -289,9 +276,9 @@ const oauth2Handler = oauth2Auth(
 
 ```typescript
 const oidcHandler = oidcAuth(
-  "oidcAuth", // scheme name
-  "https://example.com/.well-known/openid-configuration",
-  ["profile", "email"], // optional scopes
+  'oidcAuth', // scheme name
+  'https://example.com/.well-known/openid-configuration',
+  ['profile', 'email'], // optional scopes
 )(authFunction);
 ```
 
@@ -300,16 +287,16 @@ const oidcHandler = oidcAuth(
 If you need a custom security scheme, you can use the `withSecurityScheme` function directly:
 
 ```typescript
-import { withSecurityScheme } from "expresskit";
+import {withSecurityScheme} from 'expresskit';
 
 const customAuthHandler = withSecurityScheme({
-  name: "myCustomScheme",
+  name: 'myCustomScheme',
   scheme: {
-    type: "http",
-    scheme: "digest",
-    description: "Digest authentication",
+    type: 'http',
+    scheme: 'digest',
+    description: 'Digest authentication',
   },
-  scopes: ["read", "write"],
+  scopes: ['read', 'write'],
 })(authFunction);
 ```
 
@@ -318,10 +305,10 @@ const customAuthHandler = withSecurityScheme({
 Customize the Swagger UI via `swaggerUi` options or by bringing in theme helpers such as [`swagger-themes`](https://www.npmjs.com/package/swagger-themes):
 
 ```typescript
-import { SwaggerTheme, SwaggerThemeNameEnum } from "swagger-themes";
+import {SwaggerTheme, SwaggerThemeNameEnum} from 'swagger-themes';
 
 const theme = new SwaggerTheme();
-const { registerRoutes } = createOpenApiRegistry({
+const {registerRoutes} = createOpenApiRegistry({
   swaggerUi: {
     explorer: true,
     customCss: theme.getBuffer(SwaggerThemeNameEnum.DARK),
