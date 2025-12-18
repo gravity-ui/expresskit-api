@@ -83,7 +83,7 @@ export const routes: AppRoutes = {
   },
 };
 
-const app = new ExpressKit(nodekit, registerRoutes(routes));
+const app = new ExpressKit(nodekit, registerRoutes(routes, nodekit));
 
 app.run(); // Open http://localhost:3030/api/docs
 ```
