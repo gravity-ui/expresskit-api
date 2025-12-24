@@ -1,5 +1,7 @@
 # ExpressKit OpenApi Integration
 
+This package provides OpenAPI/Swagger integration for [ExpressKit](https://github.com/gravity-ui/expresskit), automatically generating API documentation from your route contracts and authentication handlers.
+
 ## Quick Start
 
 1. Add the integration to an existing ExpressKit project:
