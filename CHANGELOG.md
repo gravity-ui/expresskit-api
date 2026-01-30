@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/gravity-ui/expresskit-api/compare/v1.0.0...v1.1.0) (2026-01-30)
+
+
+### Features
+
+* Allow running multiple swaggers in a single app ([#5](https://github.com/gravity-ui/expresskit-api/issues/5)) ([84c715b](https://github.com/gravity-ui/expresskit-api/commit/84c715be014ae85a0f63b41ece4be9ae25506f3f))
+
 ## 1.0.0 (2025-12-24)
 
 
