@@ -1,4 +1,5 @@
 import type {SwaggerUiOptions} from 'swagger-ui-express';
+import '@gravity-ui/expresskit';
 
 // OpenAPI Security Scheme Object types
 export interface SecuritySchemeObject {
@@ -84,3 +85,13 @@ export interface OpenApiSchemaObject {
 }
 
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete' | 'head' | 'options';
+
+declare module '@gravity-ui/expresskit' {
+    interface RouteContract {
+        name?: string;
+        operationId?: string;
+        summary?: string;
+        description?: string;
+        tags?: string[];
+    }
+}

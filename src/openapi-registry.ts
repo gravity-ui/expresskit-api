@@ -1,5 +1,5 @@
 import type {OpenApiRegistryConfig, OpenApiSchemaObject, SecuritySchemeObject} from './types';
-import {serve, setup} from 'swagger-ui-express';
+import {serveFiles, setup} from 'swagger-ui-express';
 
 import {
     AppErrorHandler,
@@ -364,9 +364,11 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
             ...routes,
             [`MOUNT ${mountPath}`]: {
                 handler: ({router}: Parameters<AppMountHandler>[0]) => {
+                    const schema = getOpenApiSchema();
+
                     if (swaggerJsonPath) {
                         router.get(swaggerJsonPath, (_req, res) => {
-                            res.json(getOpenApiSchema());
+                            res.json(schema);
                         });
 
                         const relativePath = swaggerJsonPath.startsWith('/')
@@ -381,9 +383,13 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
                             },
                         };
 
-                        router.use('/', serve, setup(null, asyncOptions));
+                        router.use(
+                            '/',
+                            serveFiles(undefined, asyncOptions),
+                            setup(null, asyncOptions),
+                        );
                     } else {
-                        router.use('/', serve, setup(getOpenApiSchema(), options));
+                        router.use('/', serveFiles(schema), setup(schema, options));
                     }
                 },
             },

@@ -49,15 +49,23 @@
     "ts-jest": "^29.4.6",
     "tsc-watch": "^7.2.0",
     "typescript": "^5.9.3",
-    "zod": "^4.0.15"
+    "zod": "^4.3.6"
   },
   "peerDependencies": {
     "@gravity-ui/expresskit": "^2.7.0",
     "@gravity-ui/nodekit": "^1.6.0 || ^2.0.0",
     "express": "^4.21.2",
-    "zod": "4.0.15"
+    "zod": "^4.3.6"
   },
   "dependencies": {
     "swagger-ui-express": "^5.0.1"
+  },
+  "nano-staged": {
+    "*.{js,ts}": [
+      "eslint --fix --quiet"
+    ],
+    "*.{md,json,yml,yaml}": [
+      "prettier --write"
+    ]
   }
 }
