@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/gravity-ui/expresskit-api/compare/v1.1.0...v1.1.1) (2026-02-25)
+
+
+### Bug Fixes
+
+* swap params and query order ([#7](https://github.com/gravity-ui/expresskit-api/issues/7)) ([75052b2](https://github.com/gravity-ui/expresskit-api/commit/75052b20580006dd142ed4a02b3ee6eb5bbb9c23))
+
 ## [1.1.0](https://github.com/gravity-ui/expresskit-api/compare/v1.0.0...v1.1.0) (2026-01-30)
 
 
