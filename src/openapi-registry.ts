@@ -199,12 +199,12 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
 
         const parameters = [] as Record<string, unknown>[];
 
-        if (apiConfig.request?.query) {
-            parameters.push(...createParameters('query', apiConfig.request.query));
-        }
-
         if (apiConfig.request?.params) {
             parameters.push(...createParameters('path', apiConfig.request.params, true));
+        }
+
+        if (apiConfig.request?.query) {
+            parameters.push(...createParameters('query', apiConfig.request.query));
         }
 
         if (apiConfig.request?.headers) {
