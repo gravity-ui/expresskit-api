@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/gravity-ui/expresskit-api/compare/v1.1.1...v1.2.0) (2026-02-26)
+
+
+### Features
+
+* support zod effect schemas in OpenAPI (preprocess, transform and pipe) ([#9](https://github.com/gravity-ui/expresskit-api/issues/9)) ([c2025ea](https://github.com/gravity-ui/expresskit-api/commit/c2025ea9f888331512eec0585169645d9f4c7029))
+
 ## [1.1.1](https://github.com/gravity-ui/expresskit-api/compare/v1.1.0...v1.1.1) (2026-02-25)
 
 
