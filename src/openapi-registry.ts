@@ -65,12 +65,20 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
         return descriptions[statusCode] || 'Response';
     }
 
+    function toOpenApiSchema(schema: z.ZodType, io: 'input' | 'output'): Record<string, unknown> {
+        return z.toJSONSchema(schema, {
+            target: 'openapi-3.0',
+            io,
+            unrepresentable: 'any',
+        }) as Record<string, unknown>;
+    }
+
     function createParameters(
         paramType: 'query' | 'path' | 'header',
         schema: z.ZodType,
         alwaysRequired = false,
     ): Record<string, unknown>[] {
-        const jsonSchema = z.toJSONSchema(schema);
+        const jsonSchema = toOpenApiSchema(schema, 'input');
         if (jsonSchema.type !== 'object' || !jsonSchema.properties) return [];
 
         const required = (jsonSchema.required as string[]) || [];
@@ -87,7 +95,7 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
         bodySchema: z.ZodType,
         contentTypes: string[] = ['application/json'],
     ): Record<string, unknown> {
-        const schema = z.toJSONSchema(bodySchema);
+        const schema = toOpenApiSchema(bodySchema, 'input');
         const content = contentTypes.reduce(
             (acc, type) => {
                 acc[type] = {schema};
@@ -131,7 +139,7 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
             if (schema) {
                 responseObject.content = {
                     [defaultContentType]: {
-                        schema: z.toJSONSchema(schema),
+                        schema: toOpenApiSchema(schema, 'output'),
                     },
                 };
             }
@@ -288,8 +296,9 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
             if (schema) {
                 const schemaName = name || `Error${statusCode}`;
                 if (openApiSchema.components?.schemas) {
-                    openApiSchema.components.schemas[schemaName] = z.toJSONSchema(
+                    openApiSchema.components.schemas[schemaName] = toOpenApiSchema(
                         schema as z.ZodType,
+                        'output',
                     );
                 }
 

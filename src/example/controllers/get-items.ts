@@ -37,6 +37,9 @@ export const getItemsHandler = withContract(GetItemsConfig)(async (req, res) => 
         itemId: crypto.randomUUID(),
         itemName: `Item ${i + 1}`,
         quantity: (i + 1) * 2,
+        sku: `SKU-ITEM${String(i + 1).padStart(4, '0')}`,
+        requestedAtIso: new Date(Date.now() - i * 60_000).toISOString(),
+        tags: ['featured', i % 2 === 0 ? 'warehouse-a' : 'warehouse-b'],
         description: includeDetails ? `This is detailed description for item ${i + 1}.` : undefined,
         details: includeDetails
             ? [

@@ -163,6 +163,59 @@ describe('openapi-registry', () => {
             expect(requestBody.content).toBeDefined();
         });
 
+        it('should register route with response schema containing zod effects', () => {
+            const {registerRoutes, getOpenApiSchema} = createOpenApiRegistry({
+                title: 'Test API',
+            });
+
+            const responseSchema = z.object({
+                sku: z
+                    .string()
+                    .transform((value) => value.trim().toUpperCase())
+                    .pipe(z.string().regex(/^SKU-[A-Z0-9]{4,12}$/)),
+                aliases: z
+                    .string()
+                    .array()
+                    .min(1)
+                    .max(3)
+                    .transform((aliases) => aliases.map((alias) => alias.trim().toLowerCase())),
+            });
+
+            const GetItemsConfig = {
+                operationId: 'getItemsWithEffectsResponse',
+                request: {},
+                response: {
+                    content: {
+                        200: responseSchema,
+                    },
+                },
+            } satisfies RouteContract;
+
+            const handler = withContract(GetItemsConfig)(async (_req, res) => {
+                res.sendTyped(200, {
+                    sku: 'SKU-AB12',
+                    aliases: ['primary'],
+                });
+            });
+
+            registerRoutes({'GET /items-effects-response': handler}, nodekit);
+            const schema = getOpenApiSchema();
+
+            const getOperation = schema.paths['/items-effects-response'].get as Record<
+                string,
+                unknown
+            >;
+            const responses = getOperation.responses as Record<string, unknown>;
+            const okResponse = responses['200'] as Record<string, unknown>;
+            const content = okResponse.content as Record<string, Record<string, unknown>>;
+            const jsonContent = content['application/json'] as Record<string, unknown>;
+            const responseBodySchema = jsonContent.schema as Record<string, unknown>;
+
+            expect(responseBodySchema).toBeDefined();
+            expect(responseBodySchema.type).toBe('object');
+            expect(responseBodySchema.properties).toBeDefined();
+        });
+
         it('should register route with path parameters', () => {
             const {registerRoutes, getOpenApiSchema} = createOpenApiRegistry({
                 title: 'Test API',
