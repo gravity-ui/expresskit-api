@@ -2,6 +2,58 @@ import {RouteContract, withContract} from '@gravity-ui/expresskit';
 import {z} from 'zod';
 import {ErrorSchema, ItemSchema} from '../schemas';
 
+const SkuSchema = z
+    .string()
+    .transform((value) => value.trim().toUpperCase())
+    .pipe(
+        z.string().regex(/^SKU-[A-Z0-9]{4,12}$/, 'SKU must match format SKU-XXXX (alphanumeric)'),
+    );
+
+const RequestedAtSchema = z.preprocess((value) => {
+    if (typeof value === 'string' || typeof value === 'number') {
+        const parsed = new Date(value);
+        return Number.isNaN(parsed.getTime()) ? value : parsed.toISOString();
+    }
+
+    return value;
+}, z.iso.datetime());
+
+const TagsSchema = z
+    .preprocess(
+        (value) => {
+            if (typeof value === 'string') {
+                return value.split(',');
+            }
+
+            return value;
+        },
+        z
+            .string()
+            .array()
+            .min(1, 'At least one tag is required')
+            .max(5, 'At most 5 tags are allowed'),
+    )
+    .transform((tags) => tags.map((tag) => tag.trim().toLowerCase()))
+    .pipe(
+        z.array(
+            z
+                .string()
+                .min(2, 'Each tag must be at least 2 characters long')
+                .max(20, 'Each tag must be at most 20 characters long')
+                .regex(
+                    /^[a-z0-9-]+$/,
+                    'Tags must contain only lowercase letters, numbers, and hyphens',
+                ),
+        ),
+    );
+
+const AliasesSchema = z
+    .string()
+    .array()
+    .min(1, 'At least one alias is required')
+    .max(3, 'At most 3 aliases are allowed')
+    .transform((aliases) => aliases.map((alias) => alias.trim().toLowerCase()).filter(Boolean));
+
 // --- Example 2: Create Item ---
 export const CreateItemConfig = {
     operationId: 'createItem',
@@ -11,6 +63,10 @@ export const CreateItemConfig = {
         body: z.object({
             itemName: z.string().min(3, 'Item name must be at least 3 characters long'),
             quantity: z.number().int().positive('Quantity must be a positive integer'),
+            sku: SkuSchema,
+            requestedAt: RequestedAtSchema,
+            tags: TagsSchema,
+            aliases: AliasesSchema.optional(),
         }),
     },
     response: {
@@ -33,7 +89,7 @@ export const CreateItemConfig = {
 } satisfies RouteContract;
 
 export const createItemHandler = withContract(CreateItemConfig)(async (req, res) => {
-    const {itemName, quantity} = req.body; // Typed and validated
+    const {itemName, quantity, sku, requestedAt, tags, aliases} = req.body; // Typed and validated
 
     // Simulate business logic
     if (itemName === 'forbidden_item') {
@@ -48,6 +104,10 @@ export const createItemHandler = withContract(CreateItemConfig)(async (req, res)
         itemId: '123e4567-e89b-12d3-a456-426614174000',
         itemName,
         quantity,
+        sku,
+        requestedAtIso: requestedAt,
+        tags,
+        aliases,
     };
 
     res.sendValidated(201, newItem);

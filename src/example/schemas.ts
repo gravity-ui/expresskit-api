@@ -8,9 +8,13 @@ export const UserSchema = z.object({
 });
 
 export const ItemSchema = z.object({
-    itemId: z.string().uuid(),
+    itemId: z.uuid(),
     itemName: z.string(),
     quantity: z.number().positive(),
+    sku: z.string(),
+    requestedAtIso: z.iso.datetime(),
+    tags: z.array(z.string()),
+    aliases: z.array(z.string()).optional(),
 });
 
 export const SuccessMessageSchema = z.object({
