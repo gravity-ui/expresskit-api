@@ -52,7 +52,7 @@ const AliasesSchema = z
     .array()
     .min(1, 'At least one alias is required')
     .max(3, 'At most 3 aliases are allowed')
-    .transform((aliases) => aliases.map((alias) => alias.trim().toLowerCase()).filter(Boolean));
+    .transform((aliases) => aliases.map((alias) => alias.trim().toLowerCase()));
 
 // --- Example 2: Create Item ---
 export const CreateItemConfig = {

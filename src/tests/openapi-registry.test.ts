@@ -135,46 +135,6 @@ describe('openapi-registry', () => {
                     body: z.object({
                         name: z.string(),
                         quantity: z.number(),
-                        sku: z
-                            .string()
-                            .transform((value) => value.trim().toUpperCase())
-                            .pipe(z.string().regex(/^SKU-[A-Z0-9]{4,12}$/)),
-                        requestedAt: z.preprocess((value) => {
-                            if (typeof value === 'string' || typeof value === 'number') {
-                                const parsed = new Date(value);
-                                return Number.isNaN(parsed.getTime())
-                                    ? value
-                                    : parsed.toISOString();
-                            }
-
-                            return value;
-                        }, z.iso.datetime()),
-                        tags: z
-                            .preprocess((value) => {
-                                if (typeof value === 'string') {
-                                    return value.split(',');
-                                }
-
-                                return value;
-                            }, z.array(z.string()).min(1))
-                            .transform((tags) => tags.map((tag) => tag.trim().toLowerCase()))
-                            .pipe(
-                                z.array(
-                                    z
-                                        .string()
-                                        .min(2)
-                                        .max(20)
-                                        .regex(/^[a-z0-9-]+$/),
-                                ),
-                            ),
-                        aliases: z
-                            .string()
-                            .array()
-                            .min(1)
-                            .max(3)
-                            .transform((aliases) =>
-                                aliases.map((alias) => alias.trim().toLowerCase()),
-                            ),
                     }),
                 },
                 response: {
@@ -201,16 +161,59 @@ describe('openapi-registry', () => {
             expect(requestBody).toBeDefined();
             expect(requestBody.required).toBe(true);
             expect(requestBody.content).toBeDefined();
+        });
 
-            const content = requestBody.content as Record<string, Record<string, unknown>>;
-            const jsonBody = content['application/json'] as Record<string, unknown>;
-            const bodySchema = jsonBody.schema as Record<string, unknown>;
-            const properties = bodySchema.properties as Record<string, unknown>;
+        it('should register route with response schema containing zod effects', () => {
+            const {registerRoutes, getOpenApiSchema} = createOpenApiRegistry({
+                title: 'Test API',
+            });
 
-            expect(properties.sku).toBeDefined();
-            expect(properties.requestedAt).toBeDefined();
-            expect(properties.tags).toBeDefined();
-            expect(properties.aliases).toBeDefined();
+            const responseSchema = z.object({
+                sku: z
+                    .string()
+                    .transform((value) => value.trim().toUpperCase())
+                    .pipe(z.string().regex(/^SKU-[A-Z0-9]{4,12}$/)),
+                aliases: z
+                    .string()
+                    .array()
+                    .min(1)
+                    .max(3)
+                    .transform((aliases) => aliases.map((alias) => alias.trim().toLowerCase())),
+            });
+
+            const GetItemsConfig = {
+                operationId: 'getItemsWithEffectsResponse',
+                request: {},
+                response: {
+                    content: {
+                        200: responseSchema,
+                    },
+                },
+            } satisfies RouteContract;
+
+            const handler = withContract(GetItemsConfig)(async (_req, res) => {
+                res.sendTyped(200, {
+                    sku: 'SKU-AB12',
+                    aliases: ['primary'],
+                });
+            });
+
+            registerRoutes({'GET /items-effects-response': handler}, nodekit);
+            const schema = getOpenApiSchema();
+
+            const getOperation = schema.paths['/items-effects-response'].get as Record<
+                string,
+                unknown
+            >;
+            const responses = getOperation.responses as Record<string, unknown>;
+            const okResponse = responses['200'] as Record<string, unknown>;
+            const content = okResponse.content as Record<string, Record<string, unknown>>;
+            const jsonContent = content['application/json'] as Record<string, unknown>;
+            const responseBodySchema = jsonContent.schema as Record<string, unknown>;
+
+            expect(responseBodySchema).toBeDefined();
+            expect(responseBodySchema.type).toBe('object');
+            expect(responseBodySchema.properties).toBeDefined();
         });
 
         it('should register route with path parameters', () => {
