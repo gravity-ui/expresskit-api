@@ -797,7 +797,7 @@ describe('openapi-registry', () => {
                 createOpenApiRegistry({
                     title: 'Test API',
                     transformOperation: (op, {path}) => {
-                        if (path === '/legacy/test') {
+                        if (path === '/api/test') {
                             return {
                                 ...op,
                                 security: [{legacyApiKey: []}],
