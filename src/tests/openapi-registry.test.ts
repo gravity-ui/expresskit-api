@@ -784,4 +784,152 @@ describe('openapi-registry', () => {
             expect(schema.components?.securitySchemes).toEqual({});
         });
     });
+
+    describe('registerRoutes with transformOperation', () => {
+        let nodekit: NodeKit;
+
+        beforeEach(() => {
+            nodekit = new NodeKit();
+        });
+
+        it('should patch operation by path', () => {
+            const {registerRoutes, getOpenApiSchema, registerSecurityScheme} =
+                createOpenApiRegistry({
+                    title: 'Test API',
+                    transformOperation: (op, {path}) => {
+                        if (path === '/legacy/test') {
+                            return {
+                                ...op,
+                                security: [{legacyApiKey: []}],
+                            };
+                        }
+                        return op;
+                    },
+                });
+
+            registerSecurityScheme('legacyApiKey', {
+                type: 'apiKey',
+                in: 'header',
+                name: 'X-API-Key',
+            });
+
+            const handler = withContract({
+                operationId: 'test',
+                request: {},
+                response: {content: {200: z.object({})}},
+            })(async (_req, res) => {
+                res.sendTyped(200, {});
+            });
+
+            const routes = {
+                'GET /api/test': handler,
+            };
+
+            registerRoutes(routes, nodekit);
+
+            const schema = getOpenApiSchema();
+            const operation = schema.paths['/api/test'].get as Record<string, unknown>;
+            expect(operation.security).toEqual([{legacyApiKey: []}]);
+        });
+
+        it('should patch operation by description property', () => {
+            const {registerRoutes, getOpenApiSchema} = createOpenApiRegistry({
+                title: 'Test API',
+                transformOperation: (op, {route}) => {
+                    if (route.authPolicy === AuthPolicy.disabled) {
+                        return {
+                            ...op,
+                            description: 'Public route',
+                        };
+                    }
+                    return op;
+                },
+            });
+
+            const handler = withContract({
+                operationId: 'test',
+                request: {},
+                response: {content: {200: z.object({})}},
+            })(async (_req, res) => {
+                res.sendTyped(200, {});
+            });
+
+            const routes = {
+                'GET /test': {
+                    handler,
+                    authPolicy: AuthPolicy.disabled,
+                },
+            };
+
+            registerRoutes(routes, nodekit);
+
+            const schema = getOpenApiSchema();
+            const operation = schema.paths['/test'].get as Record<string, unknown>;
+            expect(operation.description).toBe('Public route');
+        });
+
+        it('should apply global patch to all routes', () => {
+            const {registerRoutes, getOpenApiSchema} = createOpenApiRegistry({
+                title: 'Test API',
+                transformOperation: (op) => ({
+                    ...op,
+                    tags: [...(op.tags || []), 'GlobalTag'],
+                }),
+            });
+
+            const handler = withContract({
+                operationId: 'test',
+                request: {},
+                response: {content: {200: z.object({})}},
+            })(async (_req, res) => {
+                res.sendTyped(200, {});
+            });
+
+            const routes = {
+                'GET /test1': handler,
+                'POST /test2': handler,
+            };
+
+            registerRoutes(routes, nodekit);
+
+            const schema = getOpenApiSchema();
+            const op1 = schema.paths['/test1'].get as Record<string, unknown>;
+            const op2 = schema.paths['/test2'].post as Record<string, unknown>;
+
+            expect(op1.tags).toEqual(['GlobalTag']);
+            expect(op2.tags).toEqual(['GlobalTag']);
+        });
+
+        it('should provide correct context to transformer', () => {
+            const transformerSpy = jest.fn((op) => op);
+
+            const {registerRoutes} = createOpenApiRegistry({
+                title: 'Test API',
+                transformOperation: transformerSpy,
+            });
+
+            const handler = withContract({
+                operationId: 'test',
+                request: {},
+                response: {content: {200: z.object({})}},
+            })(async (_req, res) => {
+                res.sendTyped(200, {});
+            });
+
+            const routes = {
+                'GET /items/:id': handler,
+            };
+
+            registerRoutes(routes, nodekit);
+
+            expect(transformerSpy).toHaveBeenCalledWith(
+                expect.anything(),
+                expect.objectContaining({
+                    method: 'get',
+                    path: '/items/{id}',
+                    route: expect.objectContaining({handler}),
+                }),
+            );
+        });
+    });
 });
