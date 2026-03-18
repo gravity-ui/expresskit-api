@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/gravity-ui/expresskit-api/compare/v1.2.0...v1.3.0) (2026-03-18)
+
+
+### Features
+
+* allow swagger operation customization via transformOperation ([#11](https://github.com/gravity-ui/expresskit-api/issues/11)) ([682fe38](https://github.com/gravity-ui/expresskit-api/commit/682fe38b448addc48e3a70a48aa3c0ab45af2dec))
+
 ## [1.2.0](https://github.com/gravity-ui/expresskit-api/compare/v1.1.1...v1.2.0) (2026-02-26)
 
 
