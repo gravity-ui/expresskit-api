@@ -1,4 +1,10 @@
-import type {OpenApiRegistryConfig, OpenApiSchemaObject, SecuritySchemeObject} from './types';
+import type {
+    OpenApiOperation,
+    OpenApiRegistryConfig,
+    OpenApiSchemaObject,
+    OpenApiSecurityRequirement,
+    SecuritySchemeObject,
+} from './types';
 import {serveFiles, setup} from 'swagger-ui-express';
 
 import {
@@ -6,7 +12,6 @@ import {
     AppMiddleware,
     AppMountHandler,
     AppRouteDescription,
-    AppRouteHandler,
     AppRoutes,
     AuthPolicy,
     RouteContract,
@@ -159,16 +164,10 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
         return openApiSchema;
     }
 
-    function registerRoute(
-        method: HttpMethod,
-        routePath: string,
-        routeHandler: AppRouteHandler,
+    function getOperationSecurity(
         authHandler?: AppMiddleware | RequestHandler,
-    ): void {
-        const apiConfig = getContract(routeHandler);
-        if (!apiConfig) return;
-
-        const security = [];
+    ): OpenApiSecurityRequirement[] {
+        const security: OpenApiSecurityRequirement[] = [];
         if (authHandler) {
             const securityScheme = getSecurityScheme(authHandler);
             if (securityScheme) {
@@ -178,33 +177,10 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
                 });
             }
         }
+        return security;
+    }
 
-        // Convert Express path to OpenAPI path
-        const openApiPath = routePath.replace(/\/:([^/]+)/g, '/{$1}');
-
-        const pathItem = openApiSchema.paths[openApiPath] || {};
-        const operation: Record<string, unknown> = {
-            parameters: [],
-            responses: {},
-        };
-
-        if ('summary' in apiConfig && apiConfig.summary) {
-            operation.summary = apiConfig.summary;
-        }
-        if ('description' in apiConfig && apiConfig.description) {
-            operation.description = apiConfig.description;
-        }
-        if ('tags' in apiConfig && apiConfig.tags) {
-            operation.tags = apiConfig.tags;
-        }
-        if ('operationId' in apiConfig && apiConfig.operationId) {
-            operation.operationId = apiConfig.operationId;
-        }
-
-        if (security.length > 0) {
-            operation.security = security;
-        }
-
+    function getOperationParameters(apiConfig: RouteContract) {
         const parameters = [] as Record<string, unknown>[];
 
         if (apiConfig.request?.params) {
@@ -218,19 +194,68 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
         if (apiConfig.request?.headers) {
             parameters.push(...createParameters('header', apiConfig.request.headers));
         }
+        return parameters;
+    }
 
-        operation.parameters = parameters;
+    function registerRoute(
+        method: HttpMethod,
+        routePath: string,
+        description: AppRouteDescription,
+        authHandler?: AppMiddleware | RequestHandler,
+        transformOperation?: (
+            operation: OpenApiOperation,
+            context: {
+                method: HttpMethod;
+                path: string;
+                route: AppRouteDescription;
+            },
+        ) => OpenApiOperation,
+    ): void {
+        const routeHandler = description.handler;
+        const apiConfig = getContract(routeHandler);
+        if (!apiConfig) return;
 
-        if (['post', 'put', 'patch'].includes(method.toLowerCase()) && apiConfig.request?.body) {
+        // Convert Express path to OpenAPI path
+        const openApiPath = routePath.replace(/\/:([^/]+)/g, '/{$1}');
+
+        const pathItem = openApiSchema.paths[openApiPath] || {};
+        const operation: OpenApiOperation = {
+            parameters: getOperationParameters(apiConfig),
+            responses: createResponses(apiConfig.response),
+        };
+
+        // Add metadata
+        if ('summary' in apiConfig && apiConfig.summary) operation.summary = apiConfig.summary;
+        if ('description' in apiConfig && apiConfig.description)
+            operation.description = apiConfig.description;
+        if ('tags' in apiConfig && apiConfig.tags) operation.tags = apiConfig.tags;
+        if ('operationId' in apiConfig && apiConfig.operationId)
+            operation.operationId = apiConfig.operationId;
+
+        // Add security
+        const security = getOperationSecurity(authHandler);
+        if (security.length > 0) {
+            operation.security = security;
+        }
+
+        // Add request body
+        if (['post', 'put', 'patch'].includes(method) && apiConfig.request?.body) {
             operation.requestBody = createRequestBody(
                 apiConfig.request.body,
                 apiConfig.request.contentType,
             );
         }
 
-        operation.responses = createResponses(apiConfig.response);
+        const finalOperation = transformOperation
+            ? transformOperation(operation, {
+                  method,
+                  path: openApiPath,
+                  route: description,
+              })
+            : operation;
 
-        pathItem[method.toLowerCase()] = operation;
+        pathItem[method] = finalOperation;
+
         openApiSchema.paths[openApiPath] = pathItem;
     }
 
@@ -362,7 +387,13 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
                           ? ctx.config.appAuthHandler
                           : undefined);
 
-            registerRoute(methodLower as HttpMethod, routePath, description.handler, authHandler);
+            registerRoute(
+                methodLower as HttpMethod,
+                routePath,
+                description,
+                authHandler,
+                config.transformOperation,
+            );
         });
 
         const mountPath = config.path ?? '/api/docs';

@@ -1,5 +1,5 @@
 import type {SwaggerUiOptions} from 'swagger-ui-express';
-import '@gravity-ui/expresskit';
+import type {AppRouteDescription} from '@gravity-ui/expresskit';
 
 // OpenAPI Security Scheme Object types
 export interface SecuritySchemeObject {
@@ -64,6 +64,28 @@ export interface OpenApiRegistryConfig {
     }[];
     swaggerUi?: SwaggerUiOptions;
     swaggerJsonPath?: string;
+    transformOperation?: (
+        operation: OpenApiOperation,
+        context: {
+            method: HttpMethod;
+            path: string;
+            route: AppRouteDescription;
+        },
+    ) => OpenApiOperation;
+}
+
+export type OpenApiSecurityRequirement = Record<string, string[]>;
+
+export interface OpenApiOperation {
+    tags?: string[];
+    summary?: string;
+    description?: string;
+    operationId?: string;
+    parameters?: Record<string, unknown>[];
+    requestBody?: Record<string, unknown>;
+    responses?: Record<string, unknown>;
+    security?: OpenApiSecurityRequirement[];
+    [key: string]: unknown;
 }
 
 export interface OpenApiSchemaObject {

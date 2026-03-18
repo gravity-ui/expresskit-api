@@ -12,37 +12,13 @@ This package provides OpenAPI/Swagger integration for [ExpressKit](https://githu
 
 2. Wrap your routes before passing them to `ExpressKit`:
 
-   **Simple approach** (without global auth handlers):
-
 ```typescript
-import {
-  ExpressKit,
-  withContract,
-  AppRoutes,
-  RouteContract,
-  AuthPolicy,
-} from '@gravity-ui/expresskit';
+import {ExpressKit, withContract, AppRoutes, RouteContract} from '@gravity-ui/expresskit';
 import {NodeKit} from '@gravity-ui/nodekit';
 import {z} from 'zod';
-import {createOpenApiRegistry, bearerAuth, apiKeyAuth} from '@gravity-ui/expresskit-api';
+import {createOpenApiRegistry} from '@gravity-ui/expresskit-api';
 
 const {registerRoutes} = createOpenApiRegistry({title: 'Super API'});
-
-const apiKeyHandler = apiKeyAuth(
-  'apiKeyAuth', // scheme name
-  'header', // location: 'header', 'query', or 'cookie'
-  'X-API-Key', // parameter name
-  ['read:items'], // optional scopes
-)(function authenticate(req, res, next) {
-  const apiKey = req.headers['x-api-key'];
-
-  if (apiKey !== 'valid_api_key') {
-    res.status(401).json({error: 'Unauthorized: Invalid API key'});
-    return;
-  }
-
-  next();
-});
 
 const CreateItemConfig = {
   operationId: 'createItem',
@@ -80,57 +56,9 @@ const createItemHandler = withContract(CreateItemConfig)(async (req, res) => {
 export const routes: AppRoutes = {
   'POST /items': {
     handler: createItemHandler,
-    authHandler: apiKeyHandler,
-    authPolicy: AuthPolicy.required,
   },
 };
 
-const app = new ExpressKit(nodekit, registerRoutes(routes, nodekit));
-
-app.run(); // Open http://localhost:3030/api/docs
-```
-
-**Using setup parameter** (with global auth handlers support):
-
-```typescript
-import {
-  ExpressKit,
-  withContract,
-  AppRoutes,
-  RouteContract,
-  AuthPolicy,
-} from '@gravity-ui/expresskit';
-import {NodeKit} from '@gravity-ui/nodekit';
-import {z} from 'zod';
-import {createOpenApiRegistry, bearerAuth} from '@gravity-ui/expresskit-api';
-
-const {registerRoutes} = createOpenApiRegistry({title: 'Super API'});
-
-// Global auth handler configured in NodeKit
-const globalAuthHandler = bearerAuth('jwtAuth')(function authenticate(req, res, next) {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  if (token !== 'valid_token') {
-    res.status(401).json({error: 'Unauthorized'});
-    return;
-  }
-  next();
-});
-
-const nodekit = new NodeKit({
-  config: {
-    appAuthHandler: globalAuthHandler,
-    appAuthPolicy: AuthPolicy.required,
-  },
-});
-
-const routes: AppRoutes = {
-  'POST /items': {
-    handler: createItemHandler,
-    // No authHandler specified - will use global appAuthHandler
-  },
-};
-
-// Use setup parameter to access nodekit context
 const app = new ExpressKit(nodekit, registerRoutes(routes, nodekit));
 
 app.run(); // Open http://localhost:3030/api/docs
@@ -195,19 +123,19 @@ ExpressKit supports automatic generation of security requirements in OpenAPI doc
 
 ### Features
 
-- **HOC Wrappers**: `withSecurityScheme` allows you to add security metadata to any authentication handler.
+- **HOC Wrappers** allow you to add security metadata to any authentication handler.
 - **Predefined Security Schemes**: Ready-to-use wrappers for common authentication types:
   - `bearerAuth`: JWT/Bearer token authentication
   - `apiKeyAuth`: API key authentication
   - `basicAuth`: Basic authentication
   - `oauth2Auth`: OAuth2 authentication
   - `oidcAuth`: OpenID Connect authentication
-- **Automatic Documentation**: Security requirements are automatically included in OpenAPI documentation.
+- **Automatic Documentation**: Security requirements are automatically included in OpenAPI documentation. **Schemas are supported for both per-route `authHandler`s and global `appAuthHandler`s configured via NodeKit.**
 
 ### Basic Usage
 
 ```typescript
-import {bearerAuth} from 'expresskit';
+import {bearerAuth} from '@gravity-ui/expresskit-api';
 import jwt from 'jsonwebtoken';
 
 // Add OpenAPI security scheme metadata to your auth handler
@@ -289,7 +217,7 @@ const oidcHandler = oidcAuth(
 If you need a custom security scheme, you can use the `withSecurityScheme` function directly:
 
 ```typescript
-import {withSecurityScheme} from 'expresskit';
+import {withSecurityScheme} from '@gravity-ui/expresskit-api';
 
 const customAuthHandler = withSecurityScheme({
   name: 'myCustomScheme',
@@ -300,6 +228,54 @@ const customAuthHandler = withSecurityScheme({
   },
   scopes: ['read', 'write'],
 })(authFunction);
+```
+
+### Customizing the OpenAPI operation
+
+You can customize the generated OpenAPI operation using the `transformOperation` callback in `createOpenApiRegistry`.
+
+This allows you to patch operations based on the route path, method, or route description properties. This is especially useful if you are using custom authentication handlers that aren't wrapped with `withSecurityScheme`, or if you want to apply global tags.
+
+```typescript
+const {registerRoutes, registerSecurityScheme} = createOpenApiRegistry({
+  title: 'My API',
+  transformOperation: (operation, {path, route}) => {
+    // Patch by path
+    if (path === '/items') {
+      return {
+        ...operation,
+        security: [{customApiKey: []}],
+      };
+    }
+
+    // Patch by route property
+    if (route.authPolicy === 'disabled') {
+      return {
+        ...operation,
+        description: `(Public) ${operation.description || ''}`,
+      };
+    }
+
+    return operation;
+  },
+});
+
+// 1. Register a custom security scheme globally
+registerSecurityScheme('customApiKey', {
+  type: 'apiKey',
+  in: 'header',
+  name: 'X-API-Key',
+});
+
+const routes = {
+  'POST /items': {
+    handler: createItemHandler,
+    authHandler: customAuthMiddleware, // Not wrapped with withSecurityScheme
+  },
+};
+
+// 2. Register routes
+registerRoutes(routes, nodekit);
 ```
 
 ## Styling Swagger UI
