@@ -67,12 +67,14 @@ export interface OpenApiRegistryConfig {
     transformOperation?: (
         operation: OpenApiOperation,
         context: {
-            method: string;
+            method: HttpMethod;
             path: string;
             route: AppRouteDescription;
         },
     ) => OpenApiOperation;
 }
+
+export type OpenApiSecurityRequirement = Record<string, string[]>;
 
 export interface OpenApiOperation {
     tags?: string[];
@@ -82,7 +84,7 @@ export interface OpenApiOperation {
     parameters?: Record<string, unknown>[];
     requestBody?: Record<string, unknown>;
     responses?: Record<string, unknown>;
-    security?: Record<string, string[]>[];
+    security?: OpenApiSecurityRequirement[];
     [key: string]: unknown;
 }
 

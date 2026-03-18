@@ -2,6 +2,7 @@ import type {
     OpenApiOperation,
     OpenApiRegistryConfig,
     OpenApiSchemaObject,
+    OpenApiSecurityRequirement,
     SecuritySchemeObject,
 } from './types';
 import {serveFiles, setup} from 'swagger-ui-express';
@@ -163,8 +164,10 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
         return openApiSchema;
     }
 
-    function getOperationSecurity(authHandler?: AppMiddleware | RequestHandler) {
-        const security = [];
+    function getOperationSecurity(
+        authHandler?: AppMiddleware | RequestHandler,
+    ): OpenApiSecurityRequirement[] {
+        const security: OpenApiSecurityRequirement[] = [];
         if (authHandler) {
             const securityScheme = getSecurityScheme(authHandler);
             if (securityScheme) {
@@ -202,7 +205,7 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
         transformOperation?: (
             operation: OpenApiOperation,
             context: {
-                method: string;
+                method: HttpMethod;
                 path: string;
                 route: AppRouteDescription;
             },
@@ -216,7 +219,7 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
         const openApiPath = routePath.replace(/\/:([^/]+)/g, '/{$1}');
 
         const pathItem = openApiSchema.paths[openApiPath] || {};
-        const operation: Record<string, unknown> = {
+        const operation: OpenApiOperation = {
             parameters: getOperationParameters(apiConfig),
             responses: createResponses(apiConfig.response),
         };
@@ -236,7 +239,7 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
         }
 
         // Add request body
-        if (['post', 'put', 'patch'].includes(method.toLowerCase()) && apiConfig.request?.body) {
+        if (['post', 'put', 'patch'].includes(method) && apiConfig.request?.body) {
             operation.requestBody = createRequestBody(
                 apiConfig.request.body,
                 apiConfig.request.contentType,
@@ -245,13 +248,13 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
 
         const finalOperation = transformOperation
             ? transformOperation(operation, {
-                  method: method.toLowerCase(),
+                  method,
                   path: openApiPath,
                   route: description,
               })
             : operation;
 
-        pathItem[method.toLowerCase()] = finalOperation;
+        pathItem[method] = finalOperation;
 
         openApiSchema.paths[openApiPath] = pathItem;
     }

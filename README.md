@@ -123,7 +123,7 @@ ExpressKit supports automatic generation of security requirements in OpenAPI doc
 
 ### Features
 
-- **HOC Wrappers** allows you to add security metadata to any authentication handler.
+- **HOC Wrappers** allow you to add security metadata to any authentication handler.
 - **Predefined Security Schemes**: Ready-to-use wrappers for common authentication types:
   - `bearerAuth`: JWT/Bearer token authentication
   - `apiKeyAuth`: API key authentication
@@ -135,7 +135,7 @@ ExpressKit supports automatic generation of security requirements in OpenAPI doc
 ### Basic Usage
 
 ```typescript
-import {bearerAuth} from 'expresskit-api';
+import {bearerAuth} from '@gravity-ui/expresskit-api';
 import jwt from 'jsonwebtoken';
 
 // Add OpenAPI security scheme metadata to your auth handler
@@ -217,7 +217,7 @@ const oidcHandler = oidcAuth(
 If you need a custom security scheme, you can use the `withSecurityScheme` function directly:
 
 ```typescript
-import {withSecurityScheme} from 'expresskit';
+import {withSecurityScheme} from '@gravity-ui/expresskit-api';
 
 const customAuthHandler = withSecurityScheme({
   name: 'myCustomScheme',
