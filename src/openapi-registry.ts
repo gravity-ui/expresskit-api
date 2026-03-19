@@ -32,6 +32,8 @@ import {NodeKit} from '@gravity-ui/nodekit';
  * @returns An object with methods to register routes, security schemes, and generate the OpenAPI schema
  */
 export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
+    const initialSecuritySchemes = {...(config.securitySchemes || {})};
+
     const openApiSchema: OpenApiSchemaObject = {
         openapi: '3.0.3',
         info: {
@@ -43,7 +45,7 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
         paths: {},
         components: {
             schemas: {},
-            securitySchemes: {},
+            securitySchemes: {...initialSecuritySchemes},
         },
     };
 
@@ -272,7 +274,7 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
         openApiSchema.paths = {};
         if (openApiSchema.components) {
             openApiSchema.components.schemas = {};
-            openApiSchema.components.securitySchemes = {};
+            openApiSchema.components.securitySchemes = {...initialSecuritySchemes};
         }
     }
 

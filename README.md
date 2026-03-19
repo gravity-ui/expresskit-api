@@ -83,6 +83,7 @@ app.run(); // Open http://localhost:3030/api/docs
 | `path`            | `'/api/docs'`                          | Mount path for Swagger UI; value is used as-is.                                                                                                                |
 | `swaggerJsonPath` | `undefined`                            | Path relative to mount path where OpenAPI schema is served as JSON. When set, Swagger UI loads the schema from this endpoint instead of embedding it directly. |
 | `authPolicy`      | `AuthPolicy.disabled`                  | Controls authentication for the Swagger UI page itself.                                                                                                        |
+| `securitySchemes` | `undefined`                            | OpenAPI Security Schemes                                                                                                                                       |
 
 Usage example:
 
@@ -94,6 +95,13 @@ const {registerRoutes} = createOpenApiRegistry({
   swaggerUi: {
     explorer: true,
     customCss: '.topbar { display: none; }',
+  },
+  securitySchemes: {
+    myApiKey: {
+      type: 'apiKey',
+      in: 'header',
+      name: 'X-API-Key',
+    },
   },
 });
 ```
