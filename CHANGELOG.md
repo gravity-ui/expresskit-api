@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.0](https://github.com/gravity-ui/expresskit-api/compare/v1.3.0...v1.4.0) (2026-03-19)
+
+
+### Features
+
+* allow configuration of authPolicy for swagger page ([#13](https://github.com/gravity-ui/expresskit-api/issues/13)) ([11bbea0](https://github.com/gravity-ui/expresskit-api/commit/11bbea0b4d9b6403a7503f0f8be08e28e89d46a9))
+* allow setting securitySchemes in config ([#14](https://github.com/gravity-ui/expresskit-api/issues/14)) ([4c1c01b](https://github.com/gravity-ui/expresskit-api/commit/4c1c01b942f66217fe33f37cff615e958f60e291))
+
 ## [1.3.0](https://github.com/gravity-ui/expresskit-api/compare/v1.2.0...v1.3.0) (2026-03-18)
 
 
