@@ -65,6 +65,7 @@ export interface OpenApiRegistryConfig {
     swaggerUi?: SwaggerUiOptions;
     swaggerJsonPath?: string;
     authPolicy?: AuthPolicy;
+    securitySchemes?: Record<string, SecuritySchemeObject>;
     transformOperation?: (
         operation: OpenApiOperation,
         context: {

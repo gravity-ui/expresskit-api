@@ -47,6 +47,13 @@ describe('openapi-registry', () => {
                     {url: 'https://staging.example.com', description: 'Staging'},
                 ],
                 path: '/docs',
+                securitySchemes: {
+                    customApiKey: {
+                        type: 'apiKey' as const,
+                        in: 'header' as const,
+                        name: 'X-Custom-Key',
+                    },
+                },
             };
 
             const {getOpenApiSchema} = createOpenApiRegistry(config);
@@ -58,6 +65,13 @@ describe('openapi-registry', () => {
             expect(schema.info.contact).toEqual(config.contact);
             expect(schema.info.license).toEqual(config.license);
             expect(schema.servers).toEqual(config.servers);
+            expect(schema.components?.securitySchemes).toEqual({
+                customApiKey: {
+                    type: 'apiKey',
+                    in: 'header',
+                    name: 'X-Custom-Key',
+                },
+            });
         });
 
         it('should create registry with swaggerUi options', () => {
@@ -790,6 +804,13 @@ describe('openapi-registry', () => {
         it('should reset paths and components', () => {
             const {registerRoutes, getOpenApiSchema, reset} = createOpenApiRegistry({
                 title: 'Test API',
+                securitySchemes: {
+                    initialKey: {
+                        type: 'apiKey',
+                        in: 'header',
+                        name: 'X-Initial-Key',
+                    },
+                },
             });
 
             const handler = withContract({
@@ -814,7 +835,13 @@ describe('openapi-registry', () => {
 
             expect(schema.paths).toEqual({});
             expect(schema.components?.schemas).toEqual({});
-            expect(schema.components?.securitySchemes).toEqual({});
+            expect(schema.components?.securitySchemes).toEqual({
+                initialKey: {
+                    type: 'apiKey',
+                    in: 'header',
+                    name: 'X-Initial-Key',
+                },
+            });
         });
     });
 
