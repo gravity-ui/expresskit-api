@@ -801,16 +801,23 @@ describe('openapi-registry', () => {
     });
 
     describe('reset', () => {
-        it('should reset paths and components', () => {
-            const {registerRoutes, getOpenApiSchema, reset} = createOpenApiRegistry({
-                title: 'Test API',
-                securitySchemes: {
-                    initialKey: {
-                        type: 'apiKey',
-                        in: 'header',
-                        name: 'X-Initial-Key',
+        it('should reset paths and components to initial state', () => {
+            const {registerRoutes, getOpenApiSchema, reset, registerSecurityScheme} =
+                createOpenApiRegistry({
+                    title: 'Test API',
+                    securitySchemes: {
+                        initialKey: {
+                            type: 'apiKey',
+                            in: 'header',
+                            name: 'X-Initial-Key',
+                        },
                     },
-                },
+                });
+
+            registerSecurityScheme('runtimeKey', {
+                type: 'apiKey',
+                in: 'header',
+                name: 'X-Runtime-Key',
             });
 
             const handler = withContract({
@@ -829,6 +836,19 @@ describe('openapi-registry', () => {
             let schema = getOpenApiSchema();
 
             expect(schema.paths['/test']).toBeDefined();
+
+            expect(schema.components?.securitySchemes).toEqual({
+                initialKey: {
+                    type: 'apiKey',
+                    in: 'header',
+                    name: 'X-Initial-Key',
+                },
+                runtimeKey: {
+                    type: 'apiKey',
+                    in: 'header',
+                    name: 'X-Runtime-Key',
+                },
+            });
 
             reset();
             schema = getOpenApiSchema();
