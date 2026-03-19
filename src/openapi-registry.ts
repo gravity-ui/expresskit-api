@@ -45,6 +45,7 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
             schemas: {},
             securitySchemes: {},
         },
+        authPolicy: config.authPolicy || AuthPolicy.disabled,
     };
 
     if (config.contact) {
@@ -403,6 +404,7 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
         return {
             ...routes,
             [`MOUNT ${mountPath}`]: {
+                authPolicy: config.authPolicy || AuthPolicy.disabled,
                 handler: ({router}: Parameters<AppMountHandler>[0]) => {
                     const schema = getOpenApiSchema();
 

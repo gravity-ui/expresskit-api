@@ -1,6 +1,12 @@
 import {createOpenApiRegistry} from '../openapi-registry';
 import {apiKeyAuth, bearerAuth} from '../security-schemas';
-import {AppRoutes, AuthPolicy, RouteContract, withContract} from '@gravity-ui/expresskit';
+import {
+    AppMountDescription,
+    AppRoutes,
+    AuthPolicy,
+    RouteContract,
+    withContract,
+} from '@gravity-ui/expresskit';
 import {NodeKit} from '@gravity-ui/nodekit';
 import {z} from 'zod';
 
@@ -669,6 +675,33 @@ describe('openapi-registry', () => {
 
             const registeredRoutes = registerRoutes(routes, nodekit);
             expect(registeredRoutes).toHaveProperty('MOUNT /api/docs');
+            const mountRoute = registeredRoutes['MOUNT /api/docs'] as AppMountDescription;
+            expect(mountRoute).toBeDefined();
+            expect(mountRoute.authPolicy).toBe(AuthPolicy.disabled);
+        });
+
+        it('should apply configured authPolicy to MOUNT route', () => {
+            const {registerRoutes} = createOpenApiRegistry({
+                title: 'Test API',
+                authPolicy: AuthPolicy.required,
+            });
+
+            const routes = {
+                'GET /test': {
+                    handler: withContract({
+                        request: {},
+                        response: {content: {200: z.object({})}},
+                    })(async (_req, res) => {
+                        res.sendTyped(200, {});
+                    }),
+                },
+            };
+
+            const registeredRoutes = registerRoutes(routes, nodekit);
+            const mountRoute = registeredRoutes['MOUNT /api/docs'] as AppMountDescription;
+
+            expect(mountRoute).toBeDefined();
+            expect(mountRoute.authPolicy).toBe(AuthPolicy.required);
         });
 
         it('should handle routes with tags and description', () => {

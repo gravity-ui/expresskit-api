@@ -82,6 +82,7 @@ app.run(); // Open http://localhost:3030/api/docs
 | `enabled`         | `true`                                 | Convenience flag—skip calling `registerRoutes` if you want to hide docs.                                                                                       |
 | `path`            | `'/api/docs'`                          | Mount path for Swagger UI; value is used as-is.                                                                                                                |
 | `swaggerJsonPath` | `undefined`                            | Path relative to mount path where OpenAPI schema is served as JSON. When set, Swagger UI loads the schema from this endpoint instead of embedding it directly. |
+| `authPolicy`      | `AuthPolicy.disabled`                  | Controls authentication for the Swagger UI page itself.                                                                                                        |
 
 Usage example:
 
