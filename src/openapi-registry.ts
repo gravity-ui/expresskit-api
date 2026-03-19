@@ -45,7 +45,6 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
             schemas: {},
             securitySchemes: {},
         },
-        authPolicy: config.authPolicy || AuthPolicy.disabled,
     };
 
     if (config.contact) {
