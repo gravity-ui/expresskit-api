@@ -347,6 +347,10 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
     }
 
     function registerRoutes(routes: AppRoutes, {ctx}: NodeKit): AppRoutes {
+        if (config.enabled === false) {
+            return routes;
+        }
+
         const recognizedMethods: readonly HttpMethod[] = [
             'get',
             'post',

@@ -98,6 +98,29 @@ describe('openapi-registry', () => {
             const registeredRoutes = registerRoutes(routes, nodekit);
             expect(registeredRoutes).toHaveProperty('MOUNT /api/docs');
         });
+
+        it('should not add MOUNT route when enabled is false', () => {
+            const {registerRoutes} = createOpenApiRegistry({
+                enabled: false,
+            });
+
+            const nodekit = new NodeKit();
+
+            const routes = {
+                'GET /test': {
+                    handler: withContract({
+                        request: {},
+                        response: {content: {200: z.object({})}},
+                    })(async (_req, res) => {
+                        res.sendTyped(200, {});
+                    }),
+                },
+            };
+
+            const registeredRoutes = registerRoutes(routes, nodekit);
+            expect(registeredRoutes).not.toHaveProperty('MOUNT /api/docs');
+            expect(registeredRoutes).toHaveProperty('GET /test');
+        });
     });
 
     describe('registerRoutes', () => {
