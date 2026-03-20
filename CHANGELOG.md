@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/gravity-ui/expresskit-api/compare/v1.4.0...v1.4.1) (2026-03-20)
+
+
+### Bug Fixes
+
+* enabled flag got ignored ([#16](https://github.com/gravity-ui/expresskit-api/issues/16)) ([ef0667c](https://github.com/gravity-ui/expresskit-api/commit/ef0667ccd901d5f8b6e16794daf2326fcf648b7b))
+
 ## [1.4.0](https://github.com/gravity-ui/expresskit-api/compare/v1.3.0...v1.4.0) (2026-03-19)
 
 
