@@ -33,7 +33,7 @@
     "@commitlint/cli": "^17.7.1",
     "@commitlint/config-conventional": "^17.7.0",
     "@gravity-ui/eslint-config": "^3.2.0",
-    "@gravity-ui/expresskit": "^2.11.1",
+    "@gravity-ui/expresskit": "^3.0.0",
     "@gravity-ui/nodekit": "^2.9.0",
     "@gravity-ui/prettier-config": "^1.1.0",
     "@gravity-ui/tsconfig": "^1.0.0",
@@ -52,7 +52,7 @@
     "zod": "^4.3.6"
   },
   "peerDependencies": {
-    "@gravity-ui/expresskit": "^2.7.0",
+    "@gravity-ui/expresskit": "^2.7.0 || ^3.0.0",
     "@gravity-ui/nodekit": "^1.6.0 || ^2.0.0",
     "express": "^4.21.2",
     "zod": "^4.3.6"
