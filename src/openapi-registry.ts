@@ -406,7 +406,7 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
         const mountPath = config.path ?? '/api/docs';
 
         if (config.skipMount) {
-            return {...routes};
+            return routes;
         }
 
         return {
