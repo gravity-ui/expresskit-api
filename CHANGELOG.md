@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/gravity-ui/expresskit-api/compare/v1.5.0...v1.6.0) (2026-04-27)
+
+
+### Features
+
+* add getDocsHandler() for mounting docs page manually ([#20](https://github.com/gravity-ui/expresskit-api/issues/20)) ([5987494](https://github.com/gravity-ui/expresskit-api/commit/59874942d300f584aad1fa5cb585a4700fff717d))
+
 ## [1.5.0](https://github.com/gravity-ui/expresskit-api/compare/v1.4.1...v1.5.0) (2026-04-14)
 
 
