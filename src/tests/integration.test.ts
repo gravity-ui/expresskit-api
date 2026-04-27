@@ -1,5 +1,5 @@
 import request from 'supertest';
-import type {Express} from 'express';
+import type {Express, NextFunction, Request, Response} from 'express';
 import {ExpressKit, RouteContract, withContract} from '@gravity-ui/expresskit';
 import {NodeKit} from '@gravity-ui/nodekit';
 import {createOpenApiRegistry} from '../openapi-registry';
@@ -106,6 +106,48 @@ describe('ExpressKit Integration Tests', () => {
             const uiResponse = await request(expressApp).get('/api-docs').redirects(1).expect(200);
 
             expect(uiResponse.headers['content-type']).toMatch(/text\/html/);
+        });
+    });
+
+    describe('skipMount: true', () => {
+        let expressApp: Express;
+        const beforeAuthSpy = jest.fn((_req: Request, _res: Response, next: NextFunction) =>
+            next(),
+        );
+
+        beforeAll(() => {
+            const nodekitWithMiddleware = new NodeKit({
+                config: {
+                    appName: 'test-app-skip-mount',
+                    appLoggingDestination: {write: () => {}},
+                    appBeforeAuthMiddleware: [beforeAuthSpy],
+                },
+            });
+
+            const registry = createOpenApiRegistry({skipMount: true, title: 'Skip Mount Test'});
+            const testApp = new ExpressKit(
+                nodekitWithMiddleware,
+                registry.registerRoutes(routes, nodekitWithMiddleware),
+            );
+            testApp.express.use('/api/docs', registry.getDocsHandler());
+            expressApp = testApp.express;
+        });
+
+        beforeEach(() => {
+            beforeAuthSpy.mockClear();
+        });
+
+        it('should serve docs UI at /api/docs without invoking appBeforeAuthMiddleware', async () => {
+            const response = await request(expressApp).get('/api/docs').redirects(1).expect(200);
+
+            expect(response.headers['content-type']).toMatch(/text\/html/);
+            expect(beforeAuthSpy).not.toHaveBeenCalled();
+        });
+
+        it('should still invoke appBeforeAuthMiddleware for normal routes', async () => {
+            await request(expressApp).get('/test').expect(200);
+
+            expect(beforeAuthSpy).toHaveBeenCalled();
         });
     });
 });

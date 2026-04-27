@@ -70,20 +70,21 @@ app.run(); // Open http://localhost:3030/api/docs
 
 `createOpenApiRegistry(config?: OpenApiRegistryConfig)` tunes both the generated schema and the Swagger UI mount. Key options:
 
-| Field             | Default                                | Description                                                                                                                                                    |
-| ----------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `title`           | `"API Documentation"`                  | Top-level title shown in the UI.                                                                                                                               |
-| `version`         | `"1.0.0"`                              | Populates `info.version`.                                                                                                                                      |
-| `description`     | `"Generated API documentation"`        | Short blurb under the title.                                                                                                                                   |
-| `contact`         | `undefined`                            | `{name, email, url}` for ownership info.                                                                                                                       |
-| `license`         | `undefined`                            | `{name, url}` displayed in the footer.                                                                                                                         |
-| `servers`         | `[ { url: 'http://localhost:3030' } ]` | Servers array for the spec dropdown.                                                                                                                           |
-| `swaggerUi`       | `{}`                                   | Passed straight to `swagger-ui-express` (`customCss`, `explorer`, themes, …).                                                                                  |
-| `enabled`         | `true`                                 | Convenience flag—skip calling `registerRoutes` if you want to hide docs.                                                                                       |
-| `path`            | `'/api/docs'`                          | Mount path for Swagger UI; value is used as-is.                                                                                                                |
-| `swaggerJsonPath` | `undefined`                            | Path relative to mount path where OpenAPI schema is served as JSON. When set, Swagger UI loads the schema from this endpoint instead of embedding it directly. |
-| `authPolicy`      | `AuthPolicy.disabled`                  | Controls authentication for the Swagger UI page itself.                                                                                                        |
-| `securitySchemes` | `undefined`                            | OpenAPI Security Schemes                                                                                                                                       |
+| Field             | Default                                | Description                                                                                                                                                                                                                                                                                                                 |
+| ----------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`           | `"API Documentation"`                  | Top-level title shown in the UI.                                                                                                                                                                                                                                                                                            |
+| `version`         | `"1.0.0"`                              | Populates `info.version`.                                                                                                                                                                                                                                                                                                   |
+| `description`     | `"Generated API documentation"`        | Short blurb under the title.                                                                                                                                                                                                                                                                                                |
+| `contact`         | `undefined`                            | `{name, email, url}` for ownership info.                                                                                                                                                                                                                                                                                    |
+| `license`         | `undefined`                            | `{name, url}` displayed in the footer.                                                                                                                                                                                                                                                                                      |
+| `servers`         | `[ { url: 'http://localhost:3030' } ]` | Servers array for the spec dropdown.                                                                                                                                                                                                                                                                                        |
+| `swaggerUi`       | `{}`                                   | Passed straight to `swagger-ui-express` (`customCss`, `explorer`, themes, …).                                                                                                                                                                                                                                               |
+| `enabled`         | `true`                                 | Convenience flag—skip calling `registerRoutes` if you want to hide docs.                                                                                                                                                                                                                                                    |
+| `path`            | `'/api/docs'`                          | Mount path for Swagger UI; value is used as-is. Ignored when `skipMount` is `true` (see below).                                                                                                                                                                                                                             |
+| `skipMount`       | `false`                                | When `true`, `registerRoutes` does **not** register a `MOUNT` route for the docs. Mount the handler yourself with `getDocsHandler()` (see [below](#manual-mounting)) so the docs path does not run ExpressKit’s per-route middleware (`appBeforeAuthMiddleware`, `appAfterAuthMiddleware`, auth, CSRF, CSP, cache headers). |
+| `swaggerJsonPath` | `undefined`                            | Path relative to mount path where OpenAPI schema is served as JSON. When set, Swagger UI loads the schema from this endpoint instead of embedding it directly.                                                                                                                                                              |
+| `authPolicy`      | `AuthPolicy.disabled`                  | Controls authentication for the Swagger UI page itself.                                                                                                                                                                                                                                                                     |
+| `securitySchemes` | `undefined`                            | OpenAPI Security Schemes                                                                                                                                                                                                                                                                                                    |
 
 Usage example:
 
@@ -120,6 +121,7 @@ const {registerRoutes} = createOpenApiRegistry({
 ```
 
 - [Basic Usage](#basic-usage)
+- [Manual mounting](#manual-mounting)
 - [Available Security Scheme Types](#available-security-scheme-types)
 - [Custom Security Schemes](#custom-security-schemes)
 - [Styling Swagger UI](#styling-swagger-ui)
@@ -285,6 +287,24 @@ const routes = {
 
 // 2. Register routes
 registerRoutes(routes, nodekit);
+```
+
+## Manual mounting
+
+A `MOUNT` doc route runs [ExpressKit’s per-route middleware](https://github.com/gravity-ui/expresskit) (e.g. `appBeforeAuthMiddleware`, auth, CSRF, CSP). To skip that, use `skipMount: true` and mount `getDocsHandler()` on `app.express` manually;
+
+```typescript
+import {ExpressKit} from '@gravity-ui/expresskit';
+import {createOpenApiRegistry} from '@gravity-ui/expresskit-api';
+
+const {registerRoutes, getDocsHandler} = createOpenApiRegistry({
+  title: 'Super API',
+  skipMount: true,
+});
+const app = new ExpressKit(nodekit, registerRoutes(routes, nodekit));
+
+app.express.use('/api/docs', getDocsHandler());
+app.run();
 ```
 
 ## Styling Swagger UI
