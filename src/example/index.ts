@@ -6,12 +6,13 @@ import {SwaggerTheme, SwaggerThemeNameEnum} from 'swagger-themes';
 import {routes} from './routes';
 
 const theme = new SwaggerTheme();
-const {registerRoutes} = createOpenApiRegistry({
+const {registerRoutes, getDocsHandler} = createOpenApiRegistry({
     title: 'Super API',
     swaggerUi: {
         explorer: true,
         customCss: theme.getBuffer(SwaggerThemeNameEnum.DARK),
     },
+    skipMount: true,
 });
 
 const nodekit = new NodeKit({
@@ -24,6 +25,8 @@ const nodekit = new NodeKit({
 });
 
 const app = new ExpressKit(nodekit, registerRoutes(routes, nodekit));
+
+app.express.use('/api/docs', getDocsHandler());
 
 // Only run the app if this file is executed directly (not when imported for tests)
 if (require.main === module) {

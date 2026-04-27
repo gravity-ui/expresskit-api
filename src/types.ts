@@ -45,6 +45,7 @@ export interface SecuritySchemeObject {
 
 export interface OpenApiRegistryConfig {
     enabled?: boolean;
+    skipMount?: boolean;
     path?: string;
     version?: string;
     title?: string;

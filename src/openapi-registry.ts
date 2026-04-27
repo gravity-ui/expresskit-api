@@ -18,6 +18,7 @@ import {
     getContract,
     getErrorContract,
 } from '@gravity-ui/expresskit';
+import {Router as createRouter} from 'express';
 import type {RequestHandler} from 'express';
 import {z} from 'zod';
 import {getSecurityScheme} from './security-schemas';
@@ -403,50 +404,61 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
         });
 
         const mountPath = config.path ?? '/api/docs';
-        const options = config.swaggerUi;
-        const swaggerJsonPath = config.swaggerJsonPath;
+
+        if (config.skipMount) {
+            return {...routes};
+        }
 
         return {
             ...routes,
             [`MOUNT ${mountPath}`]: {
                 authPolicy: config.authPolicy ?? AuthPolicy.disabled,
-                handler: ({router}: Parameters<AppMountHandler>[0]) => {
-                    const schema = getOpenApiSchema();
-
-                    if (swaggerJsonPath) {
-                        router.get(swaggerJsonPath, (_req, res) => {
-                            res.json(schema);
-                        });
-
-                        const relativePath = swaggerJsonPath.startsWith('/')
-                            ? swaggerJsonPath.slice(1)
-                            : swaggerJsonPath;
-
-                        const asyncOptions = {
-                            ...options,
-                            swaggerOptions: {
-                                ...options?.swaggerOptions,
-                                url: relativePath,
-                            },
-                        };
-
-                        router.use(
-                            '/',
-                            serveFiles(undefined, asyncOptions),
-                            setup(null, asyncOptions),
-                        );
-                    } else {
-                        router.use('/', serveFiles(schema), setup(schema, options));
-                    }
-                },
+                handler: (() => buildDocsRouter()) as AppMountHandler,
             },
         };
+    }
+
+    function buildDocsRouter(): ReturnType<typeof createRouter> {
+        const schema = getOpenApiSchema();
+        const options = config.swaggerUi;
+        const swaggerJsonPath = config.swaggerJsonPath;
+        const router = createRouter();
+
+        if (swaggerJsonPath) {
+            router.get(swaggerJsonPath, (_req, res) => {
+                res.json(schema);
+            });
+
+            const relativePath = swaggerJsonPath.startsWith('/')
+                ? swaggerJsonPath.slice(1)
+                : swaggerJsonPath;
+
+            const asyncOptions = {
+                ...options,
+                swaggerOptions: {
+                    ...options?.swaggerOptions,
+                    url: relativePath,
+                },
+            };
+
+            router.use('/', serveFiles(undefined, asyncOptions), setup(null, asyncOptions));
+        } else {
+            router.use('/', serveFiles(schema), setup(schema, options));
+        }
+
+        return router;
+    }
+
+    function getDocsHandler(): RequestHandler {
+        return buildDocsRouter();
     }
 
     return {
         registerSecurityScheme,
 
         getOpenApiSchema,
+
+        getDocsHandler,
 
         reset,
 
