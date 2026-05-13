@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.1](https://github.com/gravity-ui/expresskit-api/compare/v1.6.0...v1.6.1) (2026-05-13)
+
+
+### Bug Fixes
+
+* pass swaggerUi options to serveFiles in inline schema mode ([#22](https://github.com/gravity-ui/expresskit-api/issues/22)) ([f308c8c](https://github.com/gravity-ui/expresskit-api/commit/f308c8c2620fcc85c13b7e70739686766867bd5c))
+
 ## [1.6.0](https://github.com/gravity-ui/expresskit-api/compare/v1.5.0...v1.6.0) (2026-04-27)
 
 
