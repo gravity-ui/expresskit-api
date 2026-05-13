@@ -443,7 +443,7 @@ export function createOpenApiRegistry(config: OpenApiRegistryConfig) {
 
             router.use('/', serveFiles(undefined, asyncOptions), setup(null, asyncOptions));
         } else {
-            router.use('/', serveFiles(schema), setup(schema, options));
+            router.use('/', serveFiles(schema, options), setup(schema, options));
         }
 
         return router;

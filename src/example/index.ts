@@ -11,6 +11,9 @@ const {registerRoutes, getDocsHandler} = createOpenApiRegistry({
     swaggerUi: {
         explorer: true,
         customCss: theme.getBuffer(SwaggerThemeNameEnum.DARK),
+        swaggerOptions: {
+            persistAuthorization: true,
+        },
     },
     skipMount: true,
 });
@@ -21,6 +24,7 @@ const nodekit = new NodeKit({
         appLoggingDestination: {
             write: () => {},
         },
+        appPort: 1337,
     },
 });
 
@@ -32,7 +36,7 @@ app.express.use('/api/docs', getDocsHandler());
 if (require.main === module) {
     app.run();
 
-    console.log(`Example server running on port`);
+    console.log(`Example server running on port ${nodekit.config.appPort}`);
     console.log('Try:');
     console.log('  GET /users/123e4567-e89b-12d3-a456-426614174000');
     console.log('    Header: Authorization: Bearer valid_token');
